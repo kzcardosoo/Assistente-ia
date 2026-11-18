@@ -25,7 +25,7 @@ Todas as funções podem ser ligadas e desligadas nas Configurações.
 Baixe o **`Emy-portatil-windows.zip`**, descompacte em qualquer pasta sua e dê dois cliques em **`Emy.exe`**.
 
 - Não instala nada e **não precisa de administrador**.
-- Já vem com tudo: o app, a personagem Emy, um Python próprio, o reconhecimento de voz em português (Vosk + Whisper) e a voz.
+- Já vem com tudo: o app, a personagem Emy, um Python próprio, o reconhecimento de voz em português (Vosk + Whisper base) e a voz.
 - Se o Windows mostrar "O Windows protegeu o computador", clique em **Mais informações > Executar assim mesmo** (o programa não tem assinatura digital paga).
 - Para remover, apague a pasta. As configurações ficam em `%APPDATA%\Emy Assistente`.
 

@@ -18,9 +18,10 @@ PY="${PYTHON:-python3}"
 PY_URL="https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
 # Modelo de palavra de ativação em português (Vosk)
 VOSK_URL="https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip"
-# Whisper "small" multilíngue já compactado em int8 (projeto Rhasspy) + tokenizador oficial
-WHISPER_URL="https://huggingface.co/rhasspy/faster-whisper-small-int8/resolve/main"
-TOKENIZER_URL="https://huggingface.co/Systran/faster-whisper-small/resolve/main/tokenizer.json"
+# Whisper "base" multilíngue já compactado em int8 (projeto Rhasspy) + tokenizador oficial.
+# (O "small" é só um pouco mais preciso em português, mas deixaria o zip 3x maior e a fala 2x mais lenta.)
+WHISPER_URL="https://huggingface.co/rhasspy/faster-whisper-base-int8/resolve/main"
+TOKENIZER_URL="https://huggingface.co/Systran/faster-whisper-base/resolve/main/tokenizer.json"
 
 mkdir -p "$CACHE" "$SAIDA"
 
@@ -59,13 +60,14 @@ echo "[3/6] Modelos de voz (Vosk + Whisper)"
 baixar "$VOSK_URL" "$CACHE/vosk-pt.zip"
 rm -rf python/modelos/vosk-model-small-pt-0.3
 unzip -q "$CACHE/vosk-pt.zip" -d python/modelos
-mkdir -p python/modelos/whisper-small
+rm -rf python/modelos/whisper-*
+mkdir -p python/modelos/whisper-base
 for f in config.json model.bin vocabulary.txt; do
-  baixar "$WHISPER_URL/$f" "$CACHE/whisper-small-$f"
-  cp "$CACHE/whisper-small-$f" "python/modelos/whisper-small/$f"
+  baixar "$WHISPER_URL/$f" "$CACHE/whisper-base-$f"
+  cp "$CACHE/whisper-base-$f" "python/modelos/whisper-base/$f"
 done
-baixar "$TOKENIZER_URL" "$CACHE/whisper-small-tokenizer.json"
-cp "$CACHE/whisper-small-tokenizer.json" python/modelos/whisper-small/tokenizer.json
+baixar "$TOKENIZER_URL" "$CACHE/whisper-base-tokenizer.json"
+cp "$CACHE/whisper-base-tokenizer.json" python/modelos/whisper-base/tokenizer.json
 
 echo "[4/6] App para Windows (Electron)"
 [ -d node_modules ] || npm install --no-audit --no-fund

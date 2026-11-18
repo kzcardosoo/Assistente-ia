@@ -37,7 +37,7 @@
     "palavra_ativacao": "emy",
     "variantes": ["emi", "emmy", "amy"],
     "variantes_rapidas": { "emy": ["me", "eme", "emi", "emy"] },
-    "modelo_whisper": "small",
+    "modelo_whisper": "base",
     "sensibilidade": 0.5,
     "microfone": null
   },
