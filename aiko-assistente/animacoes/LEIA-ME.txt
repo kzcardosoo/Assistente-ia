@@ -1,0 +1,11 @@
+Opcional: animações no formato VRMA (.vrma).
+
+A personagem já tem animações automáticas (respirar, andar, dançar, acenar, dormir).
+Se quiser animações feitas à mão, coloque arquivos .vrma aqui com estas palavras no nome:
+  danca  -> usada quando ela dança (pode ter várias: danca1.vrma, danca2.vrma...)
+  andar  -> usada quando ela passeia pela tela
+  acenar -> usada quando ela acena
+  idle   -> usada quando ela está parada
+
+Você encontra animações .vrma gratuitas no VRoid Hub e em pacotes "VRM Animation".
+Animações do Mixamo (FBX) podem ser convertidas com ferramentas como fbx2vrma.

@@ -1,0 +1,66 @@
+{
+  "nome": "Aiko",
+  "nome_usuario": "",
+  "personalidade": "alegre, carinhosa, curiosa e um pouco brincalhona; fala português do Brasil de um jeito natural e leve",
+  "interesses": ["animes", "música", "games"],
+  "sites_favoritos": {
+    "youtube": "https://www.youtube.com",
+    "gmail": "https://mail.google.com"
+  },
+  "programas": {
+    "bloco de notas": { "caminho": "notepad.exe", "args": [] },
+    "calculadora": { "caminho": "calc.exe", "args": [] }
+  },
+  "ia": {
+    "provedor": "gemini",
+    "modelo": "gemini-2.5-flash",
+    "chave": "",
+    "url_personalizada": "",
+    "temperatura": 0.8,
+    "memoria_mensagens": 16
+  },
+  "modelo_vrm": "",
+  "tamanho": 1.0,
+  "voz": {
+    "ativa": true,
+    "motor": "edge",
+    "voz_edge": "pt-BR-FranciscaNeural",
+    "voz_kokoro": "pf_dora",
+    "velocidade": 0,
+    "tom": 10,
+    "volume": 1.0
+  },
+  "escuta": {
+    "clique_para_ouvir": true,
+    "ativacao_por_voz": true,
+    "palavra_ativacao": "aiko",
+    "variantes": ["aico", "aiko"],
+    "modelo_whisper": "small",
+    "sensibilidade": 0.5,
+    "microfone": null
+  },
+  "acoes": {
+    "abrir_sites": true,
+    "abrir_programas": true
+  },
+  "vida": {
+    "dancar": true,
+    "sensibilidade_musica": 0.5,
+    "andar": true,
+    "intervalo_andar_seg": 25,
+    "gravidade": true,
+    "olhar_mouse": true,
+    "dormir_ocioso_min": 10,
+    "saudacao": true,
+    "fps": 30
+  },
+  "comentarios": {
+    "ativo": true,
+    "intervalo_min": 15,
+    "pode_abrir_abas": false
+  },
+  "nao_perturbe": false,
+  "iniciar_com_sistema": false,
+  "python": "",
+  "primeira_execucao": true
+}

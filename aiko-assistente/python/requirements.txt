@@ -1,0 +1,6 @@
+# Módulo de voz da assistente (Python 3.10 a 3.12 recomendado)
+numpy
+sounddevice      # microfone
+vosk             # palavra de ativação off-line
+faster-whisper   # transcrição off-line de alta qualidade
+edge-tts         # voz neural feminina (on-line, gratuita)

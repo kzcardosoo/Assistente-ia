@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>Configurações</title>
+  <link rel="stylesheet" href="configuracoes.css">
+</head>
+<body>
+  <aside>
+    <div class="logo">&#10022; <span id="titulo-nome">Aiko</span></div>
+    <nav id="abas">
+      <button data-aba="personagem" class="ativa">Personagem</button>
+      <button data-aba="ia">IA</button>
+      <button data-aba="voz">Voz</button>
+      <button data-aba="escuta">Ouvir</button>
+      <button data-aba="acoes">Ações</button>
+      <button data-aba="vida">Vida</button>
+      <button data-aba="sistema">Sistema</button>
+    </nav>
+  </aside>
+
+  <main>
+    <!-- ======================= PERSONAGEM ======================= -->
+    <section id="aba-personagem" class="aba ativa">
+      <h1>Personagem</h1>
+      <label>Nome dela <input data-campo="nome" type="text" maxlength="30"></label>
+      <label>Como ela deve te chamar <input data-campo="nome_usuario" type="text" maxlength="40" placeholder="Seu nome ou apelido"></label>
+      <label>Personalidade
+        <textarea data-campo="personalidade" rows="3" maxlength="600"></textarea>
+        <small>Descreva o jeito dela falar. Ex.: "tímida e fofa", "sarcástica e engraçada", "calma e carinhosa".</small>
+      </label>
+      <label>Seus gostos e interesses
+        <input data-campo="interesses" data-tipo="lista" type="text" placeholder="animes, receitas, notícias de games">
+        <small>Separados por vírgula. Ela usa isso para sugerir e pesquisar coisas do seu gosto.</small>
+      </label>
+      <div class="linha">
+        <div>
+          <span class="rotulo">Modelo 3D (.vrm)</span>
+          <div class="info" id="modelo-atual">nenhum</div>
+        </div>
+        <button id="btn-vrm" type="button">Escolher modelo...</button>
+      </div>
+      <small>Crie a sua personagem de graça no <a href="#" data-link="https://vroid.com/en/studio">VRoid Studio</a> e exporte como VRM.</small>
+      <label>Tamanho na tela <span class="valor" data-mostra="tamanho"></span>
+        <input data-campo="tamanho" data-tipo="numero" type="range" min="0.5" max="2" step="0.05">
+      </label>
+    </section>
+
+    <!-- ======================= IA ======================= -->
+    <section id="aba-ia" class="aba">
+      <h1>Inteligência artificial</h1>
+      <p class="dica">Escolha uma IA gratuita on-line (cada pessoa usa a própria chave) ou uma IA local que funciona sem internet.</p>
+      <label>Provedor <select data-campo="ia.provedor" id="provedor"></select></label>
+      <div id="bloco-chave">
+        <label>Chave da API
+          <div class="com-botao">
+            <input data-campo="ia.chave" id="chave" type="password" autocomplete="off" placeholder="Cole aqui a sua chave">
+            <button type="button" id="btn-ver-chave" title="Mostrar/ocultar">&#128065;</button>
+          </div>
+          <small>A chave fica guardada criptografada no seu computador. <a href="#" id="link-chave">Onde consigo uma chave grátis?</a></small>
+        </label>
+      </div>
+      <label id="bloco-url">Endereço (URL base compatível com OpenAI)
+        <input data-campo="ia.url_personalizada" type="text" placeholder="http://localhost:1234/v1">
+      </label>
+      <label>Modelo
+        <div class="com-botao">
+          <input data-campo="ia.modelo" id="modelo-ia" type="text" list="lista-modelos">
+          <button type="button" id="btn-listar-modelos">Buscar modelos</button>
+        </div>
+        <datalist id="lista-modelos"></datalist>
+        <small id="dica-modelo"></small>
+      </label>
+      <label>Criatividade <span class="valor" data-mostra="ia.temperatura"></span>
+        <input data-campo="ia.temperatura" data-tipo="numero" type="range" min="0" max="1.5" step="0.05">
+      </label>
+      <label>Memória da conversa (mensagens) <input data-campo="ia.memoria_mensagens" data-tipo="numero" type="number" min="2" max="60"></label>
+      <div class="linha"><button type="button" id="btn-testar-ia" class="destaque">Testar conexão</button><span id="res-ia" class="resultado"></span></div>
+    </section>
+
+    <!-- ======================= VOZ ======================= -->
+    <section id="aba-voz" class="aba">
+      <h1>Voz</h1>
+      <label class="chave"><input data-campo="voz.ativa" type="checkbox"> Falar as respostas em voz alta</label>
+      <label>Motor de voz
+        <select data-campo="voz.motor">
+          <option value="edge">Edge TTS — neural, muito natural (precisa de internet)</option>
+          <option value="kokoro">Kokoro — off-line, roda no seu PC</option>
+        </select>
+      </label>
+      <label>Voz (Edge)
+        <input data-campo="voz.voz_edge" type="text" list="vozes-edge">
+        <datalist id="vozes-edge">
+          <option value="pt-BR-FranciscaNeural">Francisca (Brasil)</option>
+          <option value="pt-BR-ThalitaNeural">Thalita (Brasil)</option>
+          <option value="pt-BR-ThalitaMultilingualNeural">Thalita multilíngue (Brasil)</option>
+          <option value="pt-PT-RaquelNeural">Raquel (Portugal)</option>
+        </datalist>
+      </label>
+      <label>Voz (Kokoro) <input data-campo="voz.voz_kokoro" type="text" placeholder="pf_dora"></label>
+      <label>Velocidade <span class="valor" data-mostra="voz.velocidade" data-sufixo="%"></span>
+        <input data-campo="voz.velocidade" data-tipo="numero" type="range" min="-50" max="50" step="5">
+      </label>
+      <label>Tom (mais agudo = mais "anime") <span class="valor" data-mostra="voz.tom" data-sufixo=" Hz"></span>
+        <input data-campo="voz.tom" data-tipo="numero" type="range" min="-30" max="50" step="2">
+      </label>
+      <label>Volume <span class="valor" data-mostra="voz.volume"></span>
+        <input data-campo="voz.volume" data-tipo="numero" type="range" min="0" max="1.5" step="0.05">
+      </label>
+      <div class="linha"><button type="button" id="btn-testar-voz" class="destaque">Ouvir exemplo</button></div>
+      <p class="dica">Se a voz escolhida falhar (sem internet ou Kokoro não instalado), ela usa a voz do sistema.</p>
+    </section>
+
+    <!-- ======================= ESCUTA ======================= -->
+    <section id="aba-escuta" class="aba">
+      <h1>Ouvir</h1>
+      <div id="status-voz" class="status"></div>
+      <label class="chave"><input data-campo="escuta.clique_para_ouvir" type="checkbox"> Clicar nela faz ela começar a ouvir</label>
+      <label class="chave"><input data-campo="escuta.ativacao_por_voz" type="checkbox"> Ativar pela voz (dizendo o nome dela)</label>
+      <label>Palavra de ativação <input data-campo="escuta.palavra_ativacao" type="text" maxlength="30"></label>
+      <label>Variações aceitas
+        <input data-campo="escuta.variantes" data-tipo="lista" type="text">
+        <small>Outras formas como o reconhecimento pode "escutar" o nome. Ex.: aico, aiko.</small>
+      </label>
+      <label>Sensibilidade <span class="valor" data-mostra="escuta.sensibilidade"></span>
+        <input data-campo="escuta.sensibilidade" data-tipo="numero" type="range" min="0" max="1" step="0.05">
+      </label>
+      <label>Qualidade da transcrição (Whisper)
+        <select data-campo="escuta.modelo_whisper">
+          <option value="tiny">tiny — muito rápido, menos preciso</option>
+          <option value="base">base — rápido</option>
+          <option value="small">small — equilibrado (recomendado)</option>
+          <option value="medium">medium — mais preciso, mais pesado</option>
+        </select>
+      </label>
+      <label>Microfone
+        <div class="com-botao">
+          <select data-campo="escuta.microfone" data-tipo="microfone" id="microfone"><option value="">Padrão do sistema</option></select>
+          <button type="button" id="btn-microfones">Atualizar</button>
+        </div>
+      </label>
+      <p class="dica">Atalho para ouvir de qualquer lugar: <b>Ctrl + Alt + A</b>.</p>
+    </section>
+
+    <!-- ======================= AÇÕES ======================= -->
+    <section id="aba-acoes" class="aba">
+      <h1>Ações no computador</h1>
+      <label class="chave"><input data-campo="acoes.abrir_sites" type="checkbox"> Pode abrir sites, pesquisas no Google e no YouTube</label>
+      <label class="chave"><input data-campo="acoes.abrir_programas" type="checkbox"> Pode abrir programas da lista abaixo</label>
+
+      <h2>Programas</h2>
+      <p class="dica">Ela só abre programas cadastrados aqui. O nome é o que você vai falar ("abre o <i>Spotify</i>").</p>
+      <table class="tabela" id="tabela-programas">
+        <thead><tr><th>Nome</th><th>Caminho</th><th>Argumentos</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="linha"><button type="button" id="btn-add-programa">+ Adicionar programa...</button></div>
+
+      <h2>Sites favoritos</h2>
+      <table class="tabela" id="tabela-sites">
+        <thead><tr><th>Nome</th><th>Endereço</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="linha"><button type="button" id="btn-add-site">+ Adicionar site</button></div>
+    </section>
+
+    <!-- ======================= VIDA ======================= -->
+    <section id="aba-vida" class="aba">
+      <h1>Comportamento</h1>
+      <label class="chave"><input data-campo="vida.dancar" type="checkbox"> Dançar quando tocar música <small id="aviso-musica"></small></label>
+      <label>Sensibilidade para música <span class="valor" data-mostra="vida.sensibilidade_musica"></span>
+        <input data-campo="vida.sensibilidade_musica" data-tipo="numero" type="range" min="0" max="1" step="0.05">
+      </label>
+      <label class="chave"><input data-campo="vida.andar" type="checkbox"> Passear pela tela sozinha</label>
+      <label>Intervalo médio entre passeios (segundos) <input data-campo="vida.intervalo_andar_seg" data-tipo="numero" type="number" min="5" max="3600"></label>
+      <label class="chave"><input data-campo="vida.gravidade" type="checkbox"> Cair até a barra de tarefas quando for solta no ar</label>
+      <label class="chave"><input data-campo="vida.olhar_mouse" type="checkbox"> Seguir o mouse com o olhar</label>
+      <label>Cochilar depois de quantos minutos sem uso (0 = nunca) <input data-campo="vida.dormir_ocioso_min" data-tipo="numero" type="number" min="0" max="240"></label>
+      <label class="chave"><input data-campo="vida.saudacao" type="checkbox"> Cumprimentar ao abrir e quando você voltar</label>
+
+      <h2>Comentários espontâneos</h2>
+      <label class="chave"><input data-campo="comentarios.ativo" type="checkbox"> Fazer comentários de vez em quando</label>
+      <label>A cada quantos minutos (aprox.) <input data-campo="comentarios.intervalo_min" data-tipo="numero" type="number" min="1" max="600"></label>
+      <label class="chave"><input data-campo="comentarios.pode_abrir_abas" type="checkbox"> Nos comentários, ela pode abrir abas com sugestões do seu gosto</label>
+      <label class="chave"><input data-campo="nao_perturbe" type="checkbox"> Não perturbe (sem comentários nem saudações)</label>
+
+      <label>Quadros por segundo (mais = mais suave, gasta mais) <input data-campo="vida.fps" data-tipo="numero" type="number" min="15" max="60"></label>
+    </section>
+
+    <!-- ======================= SISTEMA ======================= -->
+    <section id="aba-sistema" class="aba">
+      <h1>Sistema</h1>
+      <label class="chave"><input data-campo="iniciar_com_sistema" type="checkbox"> Iniciar junto com o computador</label>
+      <label>Python para o módulo de voz (opcional)
+        <input data-campo="python" type="text" placeholder="Deixe vazio para detectar automaticamente">
+        <small>Use só se você instalou o Python em um lugar diferente. Ex.: C:\Python311\python.exe</small>
+      </label>
+      <div class="linha">
+        <button type="button" data-pasta="modelos">Abrir pasta de modelos</button>
+        <button type="button" data-pasta="animacoes">Abrir pasta de animações</button>
+        <button type="button" data-pasta="dados">Abrir pasta de dados</button>
+      </div>
+      <p class="dica">Coloque animações <b>.vrma</b> na pasta de animações com "danca", "andar" ou "acenar" no nome para usá-las no lugar das animações automáticas.</p>
+    </section>
+  </main>
+
+  <footer>
+    <span id="status-salvar"></span>
+    <button type="button" id="btn-salvar" class="destaque">Salvar</button>
+  </footer>
+
+  <script src="configuracoes.js"></script>
+</body>
+</html>

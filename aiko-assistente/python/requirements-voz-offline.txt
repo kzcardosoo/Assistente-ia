@@ -1,0 +1,4 @@
+# Opcional: voz feminina 100% off-line (Kokoro). Precisa também do espeak-ng instalado:
+# https://github.com/espeak-ng/espeak-ng/releases
+kokoro
+soundfile
