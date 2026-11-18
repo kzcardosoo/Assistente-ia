@@ -29,6 +29,9 @@ class Voz extends EventEmitter {
   candidatos(cfg) {
     const lista = [];
     if (cfg.python) lista.push({ cmd: cfg.python, args: [this.script] });
+    // Versão portátil: Python que já vem dentro do app (-E -s: ignora qualquer Python instalado no PC)
+    const embutido = path.join(this.dirPython, 'runtime', WIN ? 'python.exe' : 'bin/python3');
+    lista.push({ cmd: embutido, args: ['-E', '-s', '-X', 'utf8', this.script], absoluto: true });
     const exe = path.join(this.dirPython, 'dist', 'voz', WIN ? 'voz.exe' : 'voz');
     lista.push({ cmd: exe, args: [], absoluto: true });
     const venv = path.join(this.dirPython, '.venv', WIN ? 'Scripts/python.exe' : 'bin/python');
@@ -55,6 +58,7 @@ class Voz extends EventEmitter {
       escuta: cfg.escuta,
       voz: cfg.voz,
       modelo_vosk: vosk,
+      pasta_modelos: pastaModelos,
       pasta_whisper: path.join(this.dadosUsuario, 'whisper'),
       pasta_temp: path.join(this.dadosUsuario, 'audio'),
     };

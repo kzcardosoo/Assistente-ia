@@ -9,7 +9,7 @@ Todas as funções podem ser ligadas e desligadas nas Configurações.
 | Função | Como funciona |
 |---|---|
 | Só ela na tela | Janela transparente, sem moldura, sempre por cima. Cliques no espaço vazio passam para o que está atrás. |
-| Ouvir | Clique nela, diga o nome dela ("Emy") ou use **Ctrl + Alt + A**. A palavra de ativação e a transcrição rodam no seu PC (Vosk + Whisper). |
+| Ouvir | Clique nela, diga o nome dela ("Emy, ..." ou "Ei Emy, ...") ou use **Ctrl + Alt + A**. Tudo roda no seu PC: o Vosk fica atento ao nome e o Whisper confirma e transcreve. Se você disser só "Emy?", ela responde "Sim?" e espera o pedido. |
 | Conversar | Gemini, Groq ou OpenRouter (grátis, com a sua chave), ou Ollama / LM Studio (local, off-line). |
 | Voz feminina | Edge TTS (neural, on-line e gratuita) ou Kokoro (off-line). Se nenhuma funcionar, usa a voz do sistema. A boca acompanha a fala. |
 | Abrir sites | Pesquisa no Google e no YouTube, abre seus sites favoritos e sugere coisas do seu gosto. |
@@ -20,7 +20,20 @@ Todas as funções podem ser ligadas e desligadas nas Configurações.
 | Passear | Anda sozinha pela barra de tarefas. Você pode arrastá-la; se soltar no ar, ela cai até o chão. |
 | Comentários | Puxa assunto a cada X minutos (você escolhe o intervalo). |
 
-## Instalação (Windows)
+## Jeito mais fácil: versão portátil (Windows)
+
+Baixe o **`Emy-portatil-windows.zip`**, descompacte em qualquer pasta sua e dê dois cliques em **`Emy.exe`**.
+
+- Não instala nada e **não precisa de administrador**.
+- Já vem com tudo: o app, a personagem Emy, um Python próprio, o reconhecimento de voz em português (Vosk + Whisper) e a voz.
+- Se o Windows mostrar "O Windows protegeu o computador", clique em **Mais informações > Executar assim mesmo** (o programa não tem assinatura digital paga).
+- Para remover, apague a pasta. As configurações ficam em `%APPDATA%\Emy Assistente`.
+
+Dentro do zip há um arquivo **COMO USAR.txt** com o passo a passo, incluindo como pegar a chave grátis do Gemini.
+
+Para gerar esse zip você mesmo (em Linux, macOS ou Git Bash): `npm run portatil`. O script `scripts/montar-portatil.sh` baixa o Python portátil, as bibliotecas e os modelos de voz, monta o app para Windows e compacta tudo.
+
+## Instalação para desenvolvimento (Windows)
 
 1. Instale o **Node.js LTS**: https://nodejs.org
 2. Instale o **Python 3.11 ou 3.12**: https://python.org (marque "Add Python to PATH"). É opcional, mas sem ele ela não ouve o microfone e usa a voz do Windows.
@@ -34,7 +47,7 @@ Na primeira vez, as Configurações abrem sozinhas na aba **IA** para você esco
 
 ## A personagem (modelo VRM)
 
-O app usa modelos no formato **VRM**, o padrão de avatares de anime 3D.
+O app usa modelos no formato **VRM**, o padrão de avatares de anime 3D. Ele já vem com a **Emy** (`modelos/emy.vrm`): cabelo rosa, blusa lilás e olhos violeta, feita a partir de um modelo de exemplo da pixiv cuja licença permite modificar e redistribuir (veja `modelos/CREDITOS.txt`).
 
 - O jeito mais fácil é criar a sua no **VRoid Studio**, que é gratuito: https://vroid.com/en/studio. Monte cabelo, olhos e roupa (cores fortes e um contorno mais grosso deixam ela bem chamativa na tela) e exporte em **VRM**.
 - Salve como `modelos/emy.vrm` para ser o corpo padrão.
@@ -89,7 +102,7 @@ Para abrir programas, cadastre-os em **Configurações > Ações > Adicionar pro
 | Fundo preto em vez de transparente | Atualize o driver de vídeo. No Linux, use um ambiente com compositor. |
 | "Não consegui ligar os gráficos 3D" | Driver de vídeo antigo ou sem WebGL. Atualize o driver. |
 | Ela não ouve | Veja o status em **Configurações > Ouvir**. Rode `instalar.bat` de novo e confira o microfone. |
-| Não reconhece o nome | Adicione variações em **Ouvir > Variações aceitas** (ex.: "emi"). Nomes curtos e incomuns funcionam melhor. |
+| Não reconhece o nome | Fale o nome no começo da frase ("Emy, ..." ou "Ei Emy, ..."). Se ainda falhar, adicione variações em **Ouvir > Variações aceitas**. |
 | Braços atravessando a roupa | Em **Personagem**, aumente a abertura dos braços daquele modelo. |
 | Ela se ouve e responde sozinha | Use fone de ouvido ou desligue a ativação por voz. |
 | IA responde erro 401/403 | Chave errada. Gere outra no site do provedor. |

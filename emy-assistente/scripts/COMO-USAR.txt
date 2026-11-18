@@ -1,0 +1,46 @@
+=====================================================================
+  EMY - assistente virtual para a sua área de trabalho
+=====================================================================
+
+COMO ABRIR
+  1. Descompacte o zip em qualquer pasta sua (Documentos, Área de
+     Trabalho...). Não precisa instalar nada nem ser administrador.
+  2. Abra a pasta "Emy" e dê dois cliques em  Emy.exe
+  3. Se o Windows mostrar "O Windows protegeu o computador", clique em
+     "Mais informações" e depois em "Executar assim mesmo". Isso aparece
+     porque o programa não tem assinatura digital paga; é normal.
+  4. Se o Windows perguntar sobre o microfone, permita.
+
+Ela aparece no canto da tela. Na primeira vez, as Configurações abrem
+sozinhas na aba "IA".
+
+ESCOLHER A INTELIGÊNCIA ARTIFICIAL (só na primeira vez)
+  O jeito mais fácil e grátis é o Google Gemini:
+  1. Entre em https://aistudio.google.com/apikey com sua conta Google
+  2. Clique em "Create API key" e copie a chave
+  3. Nas Configurações > IA, escolha "Google Gemini", cole a chave,
+     clique em "Testar conexão" e depois em "Salvar"
+  Também funcionam: Groq, OpenRouter (grátis com chave) ou Ollama /
+  LM Studio (IA no seu PC, sem internet; precisam ser instalados à parte).
+
+COMO USAR
+  - Fale "Emy, ..." (ex.: "Emy, pesquisa receitas de bolo")
+  - Ou clique nela e fale
+  - Ou aperte Ctrl + Alt + A de qualquer lugar
+  - Clique com o botão direito nela para o menu: escrever mensagem,
+    dançar, trocar de personagem, não perturbe, configurações, sair
+  - Arraste ela com o mouse para mudar de lugar
+  - Para trocar o corpo: solte um arquivo .vrm em cima dela, ou use
+    Configurações > Personagem
+
+O QUE PRECISA DE INTERNET
+  - A IA on-line (Gemini, Groq, OpenRouter)
+  - A voz realista (Edge). Sem internet ela usa a voz do Windows.
+  O reconhecimento do nome e da sua fala funciona sem internet.
+
+INICIAR JUNTO COM O WINDOWS
+  Configurações > Sistema > "Iniciar junto com o computador".
+
+PARA REMOVER
+  Feche a Emy (botão direito > Sair) e apague a pasta "Emy".
+  As configurações ficam em %APPDATA%\Emy Assistente (pode apagar também).

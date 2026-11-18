@@ -35,7 +35,8 @@
     "clique_para_ouvir": true,
     "ativacao_por_voz": true,
     "palavra_ativacao": "emy",
-    "variantes": ["emi", "emmy"],
+    "variantes": ["emi", "emmy", "amy"],
+    "variantes_rapidas": { "emy": ["me", "eme", "emi", "emy"] },
     "modelo_whisper": "small",
     "sensibilidade": 0.5,
     "microfone": null

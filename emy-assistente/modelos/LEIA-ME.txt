@@ -1,10 +1,11 @@
-Coloque aqui o modelo 3D da sua personagem no formato VRM (ex.: emy.vrm).
+O emy.vrm é a personagem que já vem com o app (veja CREDITOS.txt).
+Para usar outra personagem, coloque aqui um modelo no formato VRM ou adicione pela galeria.
 
 Como criar uma personagem anime de graça:
   1. Baixe o VRoid Studio: https://vroid.com/en/studio
   2. Monte a personagem (cabelo, olhos, roupa, cores chamativas!)
   3. Exporte em VRM (Câmera/Exportar > Exportar como VRM)
-  4. Salve o arquivo nesta pasta com o nome emy.vrm
+  4. Adicione pela galeria (Configurações > Personagem) ou salve nesta pasta
 
 Você pode ter vários modelos e trocar quando quiser:
   - Configurações > Personagem > Adicionar modelos... (ou arraste os .vrm para a janela)

@@ -415,9 +415,12 @@ function iniciarVoz() {
   voz.on('pronto', (r) => { log('módulo de voz pronto:', JSON.stringify(r)); enviar('config', configPublica()); });
   voz.on('recursos', (r) => log('recursos de voz:', JSON.stringify(r)));
   voz.on('indisponivel', (erro) => { log(erro); enviar('config', configPublica()); });
+  let chamadoAgora = false;
+  voz.on('chamado', () => { chamadoAgora = true; }); // chamou só pelo nome: ela responde "Sim?" e ouve
   voz.on('estado', (m) => {
     estado.ouvindo = m.valor === 'ouvindo' || m.valor === 'transcrevendo';
-    enviar('estado-escuta', m.valor);
+    enviar('estado-escuta', m.valor === 'ouvindo' && chamadoAgora ? 'chamado' : m.valor);
+    if (m.valor === 'ouvindo') chamadoAgora = false;
   });
   voz.on('ativacao', () => {
     if (estado.dormindo) { estado.dormindo = false; enviar('dormir', false); }

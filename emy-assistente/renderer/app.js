@@ -226,10 +226,11 @@ api.on('pensando', (v) => {
 });
 
 api.on('estado-escuta', (v) => {
-  if (v === 'ouvindo') {
+  if (v === 'ouvindo' || v === 'chamado') {
     fala.interromper();
     flags.ouvindo = true;
-    mostrarBalao('Estou ouvindo', { classe: 'pensando', ms: 0, digitar: false });
+    if (v === 'chamado') personagem.emocao('feliz', 2000);
+    mostrarBalao(v === 'chamado' ? 'Sim? Pode falar' : 'Estou ouvindo', { classe: 'pensando', ms: 0, digitar: false });
   } else if (v === 'transcrevendo') {
     mostrarBalao('Hmm', { classe: 'pensando', ms: 0, digitar: false });
   } else {

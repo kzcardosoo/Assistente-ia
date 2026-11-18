@@ -10,7 +10,8 @@
     "dist": "node scripts/copiar-addons.js && electron-builder --win",
     "dist:linux": "node scripts/copiar-addons.js && electron-builder --linux",
     "postinstall": "node scripts/copiar-addons.js",
-    "prestart": "node scripts/copiar-addons.js"
+    "prestart": "node scripts/copiar-addons.js",
+    "portatil": "bash scripts/montar-portatil.sh"
   },
   "build": {
     "appId": "com.assistente.emy",
@@ -52,7 +53,13 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "executableName": "Emy",
+    "electronLanguages": [
+      "pt-BR",
+      "en-US"
+    ],
+    "copyright": "Emy Assistente"
   },
   "dependencies": {
     "@pixiv/three-vrm": "^3.5.5",
@@ -62,5 +69,6 @@
   "devDependencies": {
     "electron": "^45.3.4",
     "electron-builder": "^26.18.0"
-  }
+  },
+  "author": "Emy Assistente"
 }

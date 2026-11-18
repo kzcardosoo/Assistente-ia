@@ -30,6 +30,13 @@ BLOCO = 1600          # amostras por bloco (0,1 s)
 
 _trava_saida = threading.Lock()
 
+# Conversa com o app sempre em UTF-8 (no Windows o padrão seria cp1252 e quebraria os acentos)
+for _fluxo in (sys.stdin, sys.stdout, sys.stderr):
+    try:
+        _fluxo.reconfigure(encoding='utf-8', errors='replace')
+    except (AttributeError, ValueError):
+        pass
+
 
 def log(*partes):
     print('[voz]', *partes, file=sys.stderr, flush=True)
@@ -63,36 +70,55 @@ def fonetico(t):
     return re.sub(r'(.)\1', r'\1', t)  # letras dobradas: "emmy" -> "emi"
 
 
-def contem_palavra(texto, palavras, limiar=0.8):
-    """Procura a palavra de ativação no texto, aceitando pequenas diferenças
-    ("emi", "e mi"...), já que o reconhecimento nem sempre acerta nomes."""
-    tokens = normalizar(texto)
+def distancia(a, b):
+    """Quantas letras precisam mudar para "a" virar "b" (distância de Levenshtein)."""
+    anterior = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        atual = [i]
+        for j, cb in enumerate(b, 1):
+            atual.append(min(anterior[j] + 1, atual[j - 1] + 1, anterior[j - 1] + (ca != cb)))
+        anterior = atual
+    return anterior[-1]
+
+
+def bate_com_nome(trecho, palavras, limiar=0.8):
+    t = fonetico(''.join(normalizar(trecho)))
+    if not t:
+        return False
     for palavra in palavras:
         alvo = fonetico(''.join(normalizar(palavra)))
         if not alvo:
             continue
-        for tamanho in (1, 2, 3):
-            for i in range(len(tokens) - tamanho + 1):
-                junto = fonetico(''.join(tokens[i:i + tamanho]))
-                if junto == alvo:
-                    return True
-                # Aproximação só para palavras isoladas: juntar palavras ("aí com") gera falsos positivos
-                if tamanho == 1 and len(alvo) >= 4 and abs(len(junto) - len(alvo)) <= 2:
-                    if difflib.SequenceMatcher(None, junto, alvo).ratio() >= limiar:
-                        return True
+        if t == alvo:
+            return True
+        if len(alvo) >= 4 and abs(len(t) - len(alvo)) <= 2 and difflib.SequenceMatcher(None, t, alvo).ratio() >= limiar:
+            return True
+    return False
+
+
+def contem_palavra(texto, palavras, limiar=0.8, janela=3):
+    """Procura o nome nas primeiras palavras da frase, que é onde as pessoas chamam
+    ("Emy, ...", "Ei Emy, ..."). Aceita pequenas diferenças ("emi", "e mi"...)."""
+    tokens = normalizar(texto)
+    for tamanho in (1, 2, 3):
+        for i in range(min(janela, len(tokens) - tamanho + 1)):
+            junto = ''.join(tokens[i:i + tamanho])
+            if tamanho == 1 and bate_com_nome(junto, palavras, limiar):
+                return True
+            # nome "quebrado" em duas palavras ("e mi"): só aceita igualdade exata
+            if tamanho > 1 and bate_com_nome(junto, palavras, limiar=1.01):
+                return True
     return False
 
 
 def remover_palavra_inicio(texto, palavras):
-    """Tira o nome da personagem do começo do comando ("Emy, abre o..." -> "abre o...")."""
-    t = texto.strip()
-    for palavra in sorted(palavras, key=len, reverse=True):
-        if not palavra:
-            continue
-        m = re.match(r'^\W*' + re.escape(palavra) + r'\W+', t, flags=re.IGNORECASE)
-        if m:
-            return t[m.end():].strip()
-    return t
+    """Tira o chamado do começo do comando ("Ei Emy, abre o..." -> "abre o...")."""
+    partes = re.findall(r'\S+', texto.strip())
+    for i in range(min(3, len(partes))):
+        for tamanho in (1, 2):
+            if i + tamanho <= len(partes) and bate_com_nome(''.join(partes[i:i + tamanho]), palavras, 1.01 if tamanho > 1 else 0.8):
+                return ' '.join(partes[i + tamanho:]).lstrip(' ,.!?;:-').strip()
+    return texto.strip()
 
 
 class DetectorAtivacao:
@@ -103,15 +129,21 @@ class DetectorAtivacao:
         self.modelo = Model(caminho_modelo)
         self.rec = KaldiRecognizer(self.modelo, TAXA)
 
-    def processar(self, dados, palavras, limiar):
+    def processar(self, dados, palavras, rapidas, limiar):
+        """Devolve 'forte' (ouviu o nome), 'fraco' (ouviu algo parecido, precisa confirmar) ou None."""
         if self.rec.AcceptWaveform(dados):
             texto = json.loads(self.rec.Result()).get('text', '')
         else:
             texto = json.loads(self.rec.PartialResult()).get('partial', '')
-        if texto and contem_palavra(texto, palavras, limiar):
+        if not texto:
+            return None
+        if contem_palavra(texto, palavras, limiar):
             self.rec.Reset()
-            return True
-        return False
+            return 'forte'
+        if rapidas and contem_palavra(texto, rapidas, 1.01, janela=2):
+            self.rec.Reset()
+            return 'fraco'
+        return None
 
     def reiniciar(self):
         self.rec.Reset()
@@ -124,20 +156,26 @@ class DetectorAtivacao:
 
 # ---------------------------------------------------------------- transcrição (Whisper)
 class Transcritor:
-    def __init__(self, nome_modelo, pasta, ao_mudar):
+    def __init__(self, nome_modelo, pasta, ao_mudar, pasta_modelos=None):
         self.modelo = None
         self.erro = None
         self.carregando = True
         self.nome = nome_modelo
         self.ao_mudar = ao_mudar
-        threading.Thread(target=self._carregar, args=(nome_modelo, pasta), daemon=True).start()
+        threading.Thread(target=self._carregar, args=(nome_modelo, pasta, pasta_modelos), daemon=True).start()
 
-    def _carregar(self, nome, pasta):
+    def _carregar(self, nome, pasta, pasta_modelos=None):
         try:
             from faster_whisper import WhisperModel
-            os.makedirs(pasta, exist_ok=True)
-            log(f'carregando Whisper "{nome}" (na primeira vez ele é baixado, pode demorar)...')
-            self.modelo = WhisperModel(nome, device='cpu', compute_type='int8', download_root=pasta)
+            # Modelo que já vem junto do app (versão portátil): não precisa baixar nada
+            local = os.path.join(pasta_modelos, f'whisper-{nome}') if pasta_modelos else ''
+            if local and os.path.isfile(os.path.join(local, 'model.bin')):
+                log(f'carregando Whisper "{nome}" incluído no app...')
+                self.modelo = WhisperModel(local, device='cpu', compute_type='int8')
+            else:
+                os.makedirs(pasta, exist_ok=True)
+                log(f'carregando Whisper "{nome}" (na primeira vez ele é baixado, pode demorar)...')
+                self.modelo = WhisperModel(nome, device='cpu', compute_type='int8', download_root=pasta)
             log('Whisper pronto')
         except Exception as e:  # noqa: BLE001
             self.erro = str(e)[:200]
@@ -200,9 +238,11 @@ class Sintetizador:
         import edge_tts
         v = self.cfg['voz']
         caminho = self._arquivo('mp3')
+        # Respeita o proxy configurado no sistema (redes de empresa/escola)
+        proxy = os.environ.get('HTTPS_PROXY') or os.environ.get('https_proxy') or None
         com = edge_tts.Communicate(
             texto, v.get('voz_edge') or 'pt-BR-FranciscaNeural',
-            rate=f"{int(v.get('velocidade', 0)):+d}%", pitch=f"{int(v.get('tom', 0)):+d}Hz",
+            rate=f"{int(v.get('velocidade', 0)):+d}%", pitch=f"{int(v.get('tom', 0)):+d}Hz", proxy=proxy,
         )
         asyncio.run(asyncio.wait_for(com.save(caminho), timeout=25))
         if not os.path.exists(caminho) or os.path.getsize(caminho) < 100:
@@ -264,7 +304,7 @@ class Microfone:
         passo = BLOCO * 2
         for i in range(0, len(pcm), passo):
             self.fila.put(pcm[i:i + passo].ljust(passo, b'\0'))
-            time.sleep(BLOCO / TAXA / 4)  # 4x mais rápido que o tempo real
+            time.sleep(BLOCO / TAXA)  # no ritmo real, como um microfone
         silencio = b'\0' * passo
         while True:
             self.fila.put(silencio)
@@ -304,7 +344,7 @@ class ServicoVoz:
         self.falando_desde = 0.0
         self.fim_fala = 0.0
         self.ruido = 200.0
-        self.anterior = collections.deque(maxlen=4)  # 0,4 s antes da ativação
+        self.anterior = collections.deque(maxlen=25)  # 2,5 s antes da ativação (inclui o nome falado)
         self.erros = {}
         self.arquivo_teste = arquivo_teste
         self.sem_microfone = sem_microfone
@@ -354,6 +394,7 @@ class ServicoVoz:
             self.cfg['escuta'].get('modelo_whisper') or 'small',
             self.cfg.get('pasta_whisper') or os.path.join(os.getcwd(), 'whisper'),
             lambda: enviar(tipo='recursos', recursos=self.recursos()),
+            self.cfg.get('pasta_modelos'),
         )
 
     def recursos(self):
@@ -392,6 +433,16 @@ class ServicoVoz:
         lista += [v for v in e.get('variantes') or [] if v]
         return lista
 
+    def palavras_rapidas(self):
+        """Como o reconhecimento rápido (Vosk) costuma "ouvir" o nome. Ex.: "Emy" vira "me".
+        Só valem no começo da frase e sempre passam pela confirmação do Whisper."""
+        e = self.cfg['escuta']
+        chave = ''.join(normalizar(e.get('palavra_ativacao') or ''))
+        return list((e.get('variantes_rapidas') or {}).get(chave, []))
+
+    def tem_whisper(self):
+        return bool(self.transcritor and self.transcritor.modelo)
+
     # --- laço do microfone
     def laco(self):
         while True:
@@ -422,44 +473,64 @@ class ServicoVoz:
             if (self.detector and escuta.get('ativacao_por_voz', True) and not self.falando.is_set()
                     and time.time() - self.fim_fala > 0.6):
                 sens = float(escuta.get('sensibilidade', 0.5))
-                if self.detector.processar(dados, self.palavras(), 0.9 - 0.2 * sens):
+                forca = self.detector.processar(dados, self.palavras(), self.palavras_rapidas(), 0.9 - 0.2 * sens)
+                if forca == 'forte' or (forca == 'fraco' and self.tem_whisper()):
                     enviar(tipo='ativacao')
                     self.ouvir_comando(por_voz=True)
 
     def ouvir_comando(self, por_voz):
         enviar(tipo='estado', valor='ouvindo')
         self.cancelar.clear()
-        pcm = self.gravar(incluir_anterior=not por_voz)
+        # Pela voz, guarda 2,5 s de antes (o nome falado) para o Whisper confirmar; no clique, só um pouquinho
+        pcm = self.gravar(blocos_antes=25 if por_voz else 3)
         if pcm is None:
             enviar(tipo='estado', valor='parado')
-            enviar(tipo='texto', texto='')
+            if not por_voz:
+                enviar(tipo='texto', texto='')
             self.esvaziar_fila()
             return
         enviar(tipo='estado', valor='transcrevendo')
-        texto = ''
+        bruto = ''
         try:
-            texto = self.transcrever(pcm)
+            bruto = self.transcrever(pcm)
         except Exception as e:  # noqa: BLE001
             log('erro ao transcrever:', e)
-        texto = remover_palavra_inicio(texto, self.palavras())
-        log('ouvi:', texto)
+        if por_voz and self.tem_whisper() and not contem_palavra(bruto, self.palavras()):
+            log('ativação descartada (não era o nome):', bruto)
+            enviar(tipo='estado', valor='parado')
+            self.esvaziar_fila()
+            return
+        texto = remover_palavra_inicio(bruto, self.palavras()) if por_voz else bruto
+        log('ouvi:', bruto)
+        if por_voz and not texto:
+            # Chamou só pelo nome ("Emy?"): avisa e continua ouvindo o pedido.
+            # Não esvazia a fila: o começo do pedido pode ter chegado enquanto transcrevia.
+            enviar(tipo='chamado')
+            if self.detector:
+                self.detector.reiniciar()
+            self.ouvir_comando(por_voz=False)
+            return
         enviar(tipo='estado', valor='parado')
         enviar(tipo='texto', texto=texto)
         self.esvaziar_fila()
 
-    def gravar(self, incluir_anterior):
+    def gravar(self, blocos_antes):
         """Grava até a pessoa ficar em silêncio. Devolve bytes PCM ou None se ninguém falou."""
         sens = float(self.cfg['escuta'].get('sensibilidade', 0.5))
         limiar = max(self.ruido * (4.0 - 2.0 * sens), 350 - 150 * sens)
-        blocos = list(self.anterior) if incluir_anterior else []
+        antes = list(self.anterior)[-blocos_antes:] if blocos_antes else []
+        blocos = []
         falou, silencio, duracao = False, 0.0, 0.0
         while True:
             if self.cancelar.is_set():
                 return None
-            try:
-                dados = self.fila.get(timeout=1.0)
-            except queue.Empty:
-                return None
+            if antes:  # primeiro analisa o que foi dito logo antes da ativação
+                dados = antes.pop(0)
+            else:
+                try:
+                    dados = self.fila.get(timeout=1.0)
+                except queue.Empty:
+                    return None
             blocos.append(dados)
             amostras = np.frombuffer(dados, dtype=np.int16).astype(np.float32)
             nivel = float(np.sqrt(np.mean(amostras ** 2))) if amostras.size else 0.0
@@ -487,7 +558,9 @@ class ServicoVoz:
                 time.sleep(0.1)
         if t and t.modelo:
             audio = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
-            return t.transcrever(audio, dica=f"Conversa em português com a assistente {self.cfg.get('nome', '')}.")
+            n = self.cfg.get('nome') or 'Emy'
+            # Exemplos com o nome ajudam o Whisper a escrever o nome certo (sem isso "Emy" às vezes vira "AM")
+            return t.transcrever(audio, dica=f'{n}, abre o YouTube. Ei {n}, que horas são? {n}, pesquisa receitas.')
         if self.detector:
             return self.detector.transcrever(pcm)
         raise RuntimeError('nenhum mecanismo de transcrição disponível')
