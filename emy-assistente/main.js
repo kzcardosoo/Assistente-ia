@@ -14,6 +14,7 @@ const ia = require('./src/ia');
 const acoes = require('./src/acoes');
 const frases = require('./src/frases');
 const { Voz } = require('./src/voz');
+const { Modelos } = require('./src/modelos');
 
 const RAIZ = __dirname;
 const RECURSOS = app.isPackaged ? process.resourcesPath : __dirname;
@@ -24,7 +25,7 @@ const ALTURA_BASE = 640;
 if (process.platform === 'linux') app.commandLine.appendSwitch('enable-transparent-visuals');
 
 protocol.registerSchemesAsPrivileged([{
-  scheme: 'aiko',
+  scheme: 'emy',
   privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true },
 }]);
 
@@ -38,8 +39,10 @@ const estado = {
   arrastando: false, modoTexto: false, mouseSobre: false, modeloPronto: false,
 };
 
-const log = (...a) => console.log('[aiko]', ...a);
+const log = (...a) => console.log('[emy]', ...a);
 const dirModelosUsuario = () => path.join(app.getPath('userData'), 'modelos');
+let bibliotecaModelos = null;
+const modelos = () => (bibliotecaModelos ||= new Modelos({ pastaApp: path.join(RECURSOS, 'modelos'), pastaUsuario: dirModelosUsuario() }));
 
 // ------------------------------------------------------------------ utilidades
 function enviar(canal, dados) {
@@ -74,11 +77,11 @@ function mover(x, y) {
   win.setBounds({ x: Math.round(x), y: Math.round(y), ...tamanhoAtual });
 }
 
-// ------------------------------------------------------------------ protocolo aiko://
-// Serve os arquivos do app (aiko://app/...), modelos e animações (aiko://app/__recursos/...)
-// e o modelo escolhido pela pessoa (aiko://app/__usuario/...), tudo na mesma origem.
+// ------------------------------------------------------------------ protocolo emy://
+// Serve os arquivos do app (emy://app/...), modelos e animações (emy://app/__recursos/...)
+// e o modelo escolhido pela pessoa (emy://app/__usuario/...), tudo na mesma origem.
 function registrarProtocolo() {
-  protocol.handle('aiko', (req) => {
+  protocol.handle('emy', (req) => {
     const u = new URL(req.url);
     if (u.hostname !== 'app') return new Response('não encontrado', { status: 404 });
     let caminho = decodeURIComponent(u.pathname);
@@ -96,18 +99,33 @@ function registrarProtocolo() {
   });
 }
 
-function urlDoModelo(cfg) {
-  if (cfg.modelo_vrm) {
-    const p = path.join(dirModelosUsuario(), cfg.modelo_vrm);
-    if (fs.existsSync(p)) return 'aiko://app/__usuario/' + encodeURIComponent(cfg.modelo_vrm);
-  }
-  const pasta = path.join(RECURSOS, 'modelos');
-  try {
-    const arquivos = fs.readdirSync(pasta).filter((n) => n.toLowerCase().endsWith('.vrm'));
-    const escolhido = arquivos.find((n) => n.toLowerCase() === 'aiko.vrm') || arquivos[0];
-    if (escolhido) return 'aiko://app/__recursos/modelos/' + encodeURIComponent(escolhido);
-  } catch { /* sem pasta */ }
-  return null;
+// ------------------------------------------------------------------ modelos (troca de personagem)
+function usarModelo(id) {
+  if (!modelos().caminho(id)) return false;
+  config.atualizar((c) => { c.modelo_vrm = id; });
+  return true;
+}
+
+function adicionarModelos(caminhos, { usarPrimeiro = false } = {}) {
+  const r = modelos().adicionar(caminhos);
+  if (r.erros.length) log('modelos recusados:', r.erros.join(' | '));
+  if (usarPrimeiro && r.adicionados[0]) usarModelo(r.adicionados[0]);
+  else atualizarBandeja();
+  return r;
+}
+
+async function escolherEAdicionarModelos(janela, usarPrimeiro) {
+  const r = await dialog.showOpenDialog(janela, {
+    title: 'Adicionar modelos da personagem',
+    filters: [{ name: 'Modelo VRM', extensions: ['vrm'] }],
+    properties: ['openFile', 'multiSelections'],
+  });
+  if (r.canceled || !r.filePaths.length) return { adicionados: [], erros: [] };
+  return adicionarModelos(r.filePaths, { usarPrimeiro });
+}
+
+function ajusteDoModelo(cfg, id) {
+  return { bracos: 0, ...(cfg.ajustes_modelos?.[id] || {}) };
 }
 
 function listarAnimacoes() {
@@ -115,7 +133,7 @@ function listarAnimacoes() {
   try {
     return fs.readdirSync(pasta)
       .filter((n) => n.toLowerCase().endsWith('.vrma'))
-      .map((n) => ({ nome: n, url: 'aiko://app/__recursos/animacoes/' + encodeURIComponent(n) }));
+      .map((n) => ({ nome: n, url: 'emy://app/__recursos/animacoes/' + encodeURIComponent(n) }));
   } catch { return []; }
 }
 
@@ -123,7 +141,9 @@ function listarAnimacoes() {
 function configPublica(cfg = config.ler()) {
   const c = structuredClone(cfg);
   delete c.ia.chave;
-  c.modeloUrl = urlDoModelo(cfg);
+  c.modeloId = modelos().ativo(cfg);
+  c.modeloUrl = c.modeloId ? modelos().url(c.modeloId) : null;
+  c.ajusteModelo = ajusteDoModelo(cfg, c.modeloId);
   c.animacoes = listarAnimacoes();
   c.plataforma = process.platform;
   c.vozDisponivel = !!(voz && voz.disponivel);
@@ -163,7 +183,7 @@ function criarPersonagem() {
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setIgnoreMouseEvents(true, { forward: true });
-  win.loadURL('aiko://app/renderer/index.html');
+  win.loadURL('emy://app/renderer/index.html');
   win.once('ready-to-show', () => win.showInactive());
   win.on('closed', () => { win = null; });
   win.webContents.on('console-message', (e) => {
@@ -482,6 +502,14 @@ function iniciarSono() {
 function montarMenu() {
   const cfg = config.ler();
   const visivel = win && win.isVisible();
+  const ativo = modelos().ativo(cfg);
+  const lista = modelos().listar().filter((m) => !m.erro);
+  const submenuModelos = [
+    ...lista.map((m) => ({ label: m.titulo, type: 'radio', checked: m.id === ativo, click: () => usarModelo(m.id) })),
+    ...(lista.length ? [{ type: 'separator' }] : []),
+    { label: 'Adicionar modelos...', click: () => escolherEAdicionarModelos(null, true) },
+    { label: 'Gerenciar modelos...', click: () => abrirConfiguracoes('personagem') },
+  ];
   return Menu.buildFromTemplate([
     { label: 'Ouvir agora', accelerator: ATALHO_OUVIR, click: iniciarEscuta },
     { label: 'Escrever mensagem', click: abrirModoTexto },
@@ -491,6 +519,7 @@ function montarMenu() {
     { label: 'Acenar', click: () => enviar('acao', 'acenar') },
     { label: 'Passear', click: () => passear(true) },
     { type: 'separator' },
+    { label: 'Trocar personagem', submenu: submenuModelos },
     {
       label: 'Não perturbe', type: 'checkbox', checked: !!cfg.nao_perturbe,
       click: (item) => config.atualizar((c) => { c.nao_perturbe = item.checked; }),
@@ -537,7 +566,7 @@ function abrirConfiguracoes(aba) {
     backgroundColor: '#1e1b2e',
     webPreferences: { preload: path.join(RAIZ, 'preload-config.js'), contextIsolation: true, sandbox: true },
   });
-  janelaConfig.loadURL('aiko://app/renderer/configuracoes.html' + (typeof aba === 'string' ? '#' + aba : ''));
+  janelaConfig.loadURL('emy://app/renderer/configuracoes.html' + (typeof aba === 'string' ? '#' + aba : ''));
   janelaConfig.once('ready-to-show', () => janelaConfig.show());
   janelaConfig.on('closed', () => { janelaConfig = null; });
 }
@@ -607,6 +636,12 @@ function registrarIPC() {
     if (v) pararAndar();
   });
   ipcMain.on('log', (_e, msg) => log('[tela]', msg));
+  ipcMain.on('soltar-modelos', (_e, caminhos) => {
+    const r = adicionarModelos(caminhos, { usarPrimeiro: true });
+    if (r.erros.length && !r.adicionados.length) {
+      enviar('resposta', { fala: 'Esse arquivo não é um modelo VRM que eu consiga usar.', emocao: 'triste', curto: true });
+    }
+  });
 }
 
 // ------------------------------------------------------------------ IPC: configurações
@@ -615,7 +650,6 @@ function registrarIPCConfig() {
     cfg: config.ler(),
     provedores: ia.PROVEDORES,
     voz: voz ? { disponivel: voz.disponivel, recursos: voz.recursos, erro: voz.erro } : { disponivel: false },
-    modeloAtual: urlDoModelo(config.ler()) ? decodeURIComponent(urlDoModelo(config.ler()).split('/').pop()) : '',
     plataforma: process.platform,
     pastaDados: app.getPath('userData'),
   }));
@@ -636,15 +670,41 @@ function registrarIPCConfig() {
     falar(frase, cfg);
     return true;
   });
-  ipcMain.handle('cfg-escolher-vrm', async () => {
-    const r = await dialog.showOpenDialog(janelaConfig, {
-      title: 'Escolha o modelo da personagem', filters: [{ name: 'Modelo VRM', extensions: ['vrm'] }], properties: ['openFile'],
+  const estadoModelos = (extra = {}) => {
+    const cfg = config.ler();
+    const ativo = modelos().ativo(cfg);
+    return { lista: modelos().listar(), ativo, ajustes: cfg.ajustes_modelos || {}, ...extra };
+  };
+  ipcMain.handle('cfg-modelos-listar', () => estadoModelos());
+  ipcMain.handle('cfg-modelos-adicionar', async (_e, caminhos) => {
+    const r = Array.isArray(caminhos) && caminhos.length
+      ? adicionarModelos(caminhos)
+      : await escolherEAdicionarModelos(janelaConfig, false);
+    return estadoModelos(r);
+  });
+  ipcMain.handle('cfg-modelos-usar', (_e, id) => estadoModelos({ ok: usarModelo(id) }));
+  ipcMain.handle('cfg-modelos-remover', async (_e, id) => {
+    const m = modelos().listar().find((x) => x.id === id);
+    if (!m || !m.removivel) return estadoModelos({ ok: false });
+    const r = await dialog.showMessageBox(janelaConfig, {
+      type: 'question', buttons: ['Remover', 'Cancelar'], defaultId: 1, cancelId: 1,
+      message: `Remover o modelo "${m.titulo}"?`, detail: 'O arquivo copiado para o app será apagado. O original não é afetado.',
     });
-    if (r.canceled || !r.filePaths[0]) return null;
-    fs.mkdirSync(dirModelosUsuario(), { recursive: true });
-    const nome = path.basename(r.filePaths[0]);
-    fs.copyFileSync(r.filePaths[0], path.join(dirModelosUsuario(), nome));
-    return nome;
+    if (r.response !== 0) return estadoModelos({ ok: false });
+    const eraAtivo = modelos().ativo(config.ler()) === id;
+    modelos().remover(id);
+    config.atualizar((c) => {
+      if (c.ajustes_modelos) delete c.ajustes_modelos[id];
+      if (eraAtivo) c.modelo_vrm = '';
+    });
+    return estadoModelos({ ok: true });
+  });
+  ipcMain.handle('cfg-modelos-ajustar', (_e, id, ajuste) => {
+    config.atualizar((c) => {
+      c.ajustes_modelos = c.ajustes_modelos || {};
+      c.ajustes_modelos[id] = { ...(c.ajustes_modelos[id] || {}), ...ajuste };
+    });
+    return true;
   });
   ipcMain.handle('cfg-escolher-programa', async () => {
     const filtros = process.platform === 'win32'
@@ -714,7 +774,10 @@ if (!app.requestSingleInstanceLock()) {
   });
 }
 
-// Ganchos para testes automatizados (só existem com AIKO_TESTE=1).
-if (process.env.AIKO_TESTE === '1') {
-  global.__aiko = { processar, estado, passear, comentar, abrirConfiguracoes, abrirModoTexto, enviar, iniciarEscuta, cair, mover };
+// Ganchos para testes automatizados (só existem com EMY_TESTE=1).
+if (process.env.EMY_TESTE === '1') {
+  global.__emy = {
+    processar, estado, passear, comentar, abrirConfiguracoes, abrirModoTexto, enviar, iniciarEscuta, cair, mover,
+    adicionarModelos, usarModelo, montarMenu, modelos,
+  };
 }

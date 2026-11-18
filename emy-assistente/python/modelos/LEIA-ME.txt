@@ -1,4 +1,4 @@
-Aqui fica o modelo do Vosk usado para ouvir a palavra de ativação (ex.: "Aiko").
+Aqui fica o modelo do Vosk usado para ouvir a palavra de ativação (ex.: "Emy").
 
 O instalador (instalar.bat) baixa automaticamente o modelo em português:
   vosk-model-small-pt-0.3

@@ -1,13 +1,13 @@
 'use strict';
 // Ponte segura entre a janela da personagem e o processo principal.
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const CANAIS = [
   'config', 'cursor', 'resposta', 'pensando', 'estado-escuta', 'tocar-audio', 'falar-navegador',
   'interromper', 'acao', 'andar', 'parar-andar', 'arrastada', 'cair', 'dormir', 'modo-texto',
 ];
 
-contextBridge.exposeInMainWorld('aiko', {
+contextBridge.exposeInMainWorld('emy', {
   pronto: () => ipcRenderer.invoke('renderer-pronto'),
   modeloCarregado: (ok) => ipcRenderer.send('modelo-carregado', !!ok),
   mouseSobre: (v) => ipcRenderer.send('mouse-sobre', !!v),
@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('aiko', {
   falaInicio: () => ipcRenderer.send('fala-inicio'),
   falaFim: () => ipcRenderer.send('fala-fim'),
   dancando: (v) => ipcRenderer.send('dancando', !!v),
+  // Arquivos .vrm soltos em cima da personagem viram um novo modelo
+  soltarModelos: (arquivos) => ipcRenderer.send('soltar-modelos', [...arquivos].map((f) => webUtils.getPathForFile(f)).filter(Boolean)),
   log: (...a) => ipcRenderer.send('log', a.map(String).join(' ')),
   on: (canal, fn) => {
     if (CANAIS.includes(canal)) ipcRenderer.on(canal, (_e, dados) => fn(dados));

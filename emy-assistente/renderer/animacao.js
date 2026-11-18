@@ -141,6 +141,7 @@ export class Animador {
     this.ritmoExterno = null;
     this.energiaFala = 0;
     this.olhar = { yaw: 0, pitch: 0 };
+    this.ajuste = { bracos: 0 }; // ajustes do modelo (ex.: abrir os braços para não atravessar a roupa)
 
     this.mixer = new THREE.AnimationMixer(vrm.scene);
     this.clipes = {};
@@ -314,6 +315,10 @@ export class Animador {
         somar(p, 'leftLowerArm', 0, -0.3 * e * (0.5 + 0.5 * Math.sin(t * 1.3 + 1)), 0);
       }
     }
+
+    // Ajuste do modelo: abre (ou fecha) os braços em todas as poses
+    const b = Number(this.ajuste?.bracos) || 0;
+    if (b) { somar(p, 'leftUpperArm', 0, 0, b); somar(p, 'rightUpperArm', 0, 0, -b); }
 
     // A cabeça acompanha parte do olhar (os olhos fazem o resto)
     if (this.estado !== 'dormindo' && this.estado !== 'arrastada' && this.estado !== 'caindo') {

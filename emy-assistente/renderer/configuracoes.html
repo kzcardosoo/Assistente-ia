@@ -8,7 +8,7 @@
 </head>
 <body>
   <aside>
-    <div class="logo">&#10022; <span id="titulo-nome">Aiko</span></div>
+    <div class="logo">&#10022; <span id="titulo-nome">Emy</span></div>
     <nav id="abas">
       <button data-aba="personagem" class="ativa">Personagem</button>
       <button data-aba="ia">IA</button>
@@ -24,6 +24,22 @@
     <!-- ======================= PERSONAGEM ======================= -->
     <section id="aba-personagem" class="aba ativa">
       <h1>Personagem</h1>
+      <h2 class="primeiro">Modelos (corpos da personagem)</h2>
+      <p class="dica">Adicione quantos modelos <b>.vrm</b> quiser e troque quando quiser. Qualquer modelo ganha as mesmas funções:
+        falar mexendo a boca, piscar, olhar o mouse, dançar, andar, acenar e dormir.
+        Crie os seus de graça no <a href="#" data-link="https://vroid.com/en/studio">VRoid Studio</a>.</p>
+      <div id="galeria" class="galeria"></div>
+      <div id="soltar" class="soltar">Arraste arquivos <b>.vrm</b> para cá ou
+        <button type="button" id="btn-add-vrm">Adicionar modelos...</button></div>
+      <div id="res-modelos" class="resultado"></div>
+      <div id="bloco-ajuste">
+        <label>Abertura dos braços de <b id="nome-ajuste">este modelo</b> <span class="valor" id="valor-bracos"></span>
+          <input type="range" id="ajuste-bracos" min="-0.3" max="0.6" step="0.02">
+          <small>Aumente se os braços atravessarem a roupa ou o corpo. Vale só para o modelo em uso.</small>
+        </label>
+      </div>
+
+      <h2>Jeito dela</h2>
       <label>Nome dela <input data-campo="nome" type="text" maxlength="30"></label>
       <label>Como ela deve te chamar <input data-campo="nome_usuario" type="text" maxlength="40" placeholder="Seu nome ou apelido"></label>
       <label>Personalidade
@@ -34,17 +50,10 @@
         <input data-campo="interesses" data-tipo="lista" type="text" placeholder="animes, receitas, notícias de games">
         <small>Separados por vírgula. Ela usa isso para sugerir e pesquisar coisas do seu gosto.</small>
       </label>
-      <div class="linha">
-        <div>
-          <span class="rotulo">Modelo 3D (.vrm)</span>
-          <div class="info" id="modelo-atual">nenhum</div>
-        </div>
-        <button id="btn-vrm" type="button">Escolher modelo...</button>
-      </div>
-      <small>Crie a sua personagem de graça no <a href="#" data-link="https://vroid.com/en/studio">VRoid Studio</a> e exporte como VRM.</small>
       <label>Tamanho na tela <span class="valor" data-mostra="tamanho"></span>
         <input data-campo="tamanho" data-tipo="numero" type="range" min="0.5" max="2" step="0.05">
       </label>
+
     </section>
 
     <!-- ======================= IA ======================= -->
@@ -121,7 +130,7 @@
       <label>Palavra de ativação <input data-campo="escuta.palavra_ativacao" type="text" maxlength="30"></label>
       <label>Variações aceitas
         <input data-campo="escuta.variantes" data-tipo="lista" type="text">
-        <small>Outras formas como o reconhecimento pode "escutar" o nome. Ex.: aico, aiko.</small>
+        <small>Outras formas como o reconhecimento pode "escutar" o nome. Ex.: emi, emmy.</small>
       </label>
       <label>Sensibilidade <span class="valor" data-mostra="escuta.sensibilidade"></span>
         <input data-campo="escuta.sensibilidade" data-tipo="numero" type="range" min="0" max="1" step="0.05">

@@ -34,7 +34,7 @@ function preencher() {
     } else el.value = v ?? '';
   }
   mostrarValores();
-  $('#titulo-nome').textContent = cfg.nome || 'Aiko';
+  $('#titulo-nome').textContent = cfg.nome || 'Emy';
   preencherProgramas();
   preencherSites();
   atualizarProvedor(false);
@@ -154,15 +154,125 @@ function mostrarStatusVoz() {
   ].join('');
 }
 
-// ------------------------------------------------------------------ modelo VRM
-$('#btn-vrm').addEventListener('click', async () => {
-  const nome = await api.escolherVrm();
-  if (!nome) return;
-  cfg = coletar();
-  cfg.modelo_vrm = nome;
-  await api.salvar(cfg);
-  $('#modelo-atual').textContent = nome;
-  avisar('Modelo trocado!');
+// ------------------------------------------------------------------ modelos (galeria)
+let modelosEstado = { lista: [], ativo: null, ajustes: {} };
+
+function mostrarModelos(estado) {
+  modelosEstado = estado;
+  // Mantém a cópia local em dia, para o botão Salvar não desfazer a troca
+  cfg.modelo_vrm = estado.ativo || '';
+  cfg.ajustes_modelos = estado.ajustes || {};
+  const gal = $('#galeria');
+  gal.innerHTML = '';
+  if (!estado.lista.length) {
+    gal.innerHTML = '<p class="dica">Nenhum modelo ainda. Adicione um arquivo .vrm abaixo.</p>';
+  }
+  for (const m of estado.lista) {
+    const ativo = m.id === estado.ativo;
+    const c = document.createElement('div');
+    c.className = 'cartao' + (ativo ? ' ativo' : '') + (m.erro ? ' erro' : '');
+    const foto = document.createElement('div');
+    foto.className = 'foto';
+    if (m.miniatura) {
+      const img = document.createElement('img');
+      img.src = m.miniatura;
+      img.alt = m.titulo;
+      foto.append(img);
+    } else {
+      foto.textContent = (m.titulo || '?').slice(0, 1).toUpperCase();
+    }
+    const texto = document.createElement('div');
+    texto.className = 'texto';
+    const titulo = document.createElement('div');
+    titulo.className = 'titulo';
+    titulo.textContent = m.titulo;
+    titulo.title = m.arquivo;
+    const sub = document.createElement('div');
+    sub.className = 'sub';
+    sub.textContent = m.erro ? 'Erro: ' + m.erro
+      : [m.autor && 'por ' + m.autor, 'VRM ' + m.versao, m.origem === 'app' ? 'do app' : null].filter(Boolean).join(' · ');
+    sub.title = sub.textContent + (m.licenca ? '\nLicença: ' + m.licenca : '');
+    texto.append(titulo, sub);
+    const acoesEl = document.createElement('div');
+    acoesEl.className = 'acoes';
+    const usar = document.createElement('button');
+    usar.type = 'button';
+    usar.textContent = ativo ? 'Em uso' : 'Usar';
+    usar.disabled = ativo || !!m.erro;
+    if (!ativo) usar.className = 'destaque';
+    usar.addEventListener('click', async () => {
+      mostrarModelos(await api.usarModelo(m.id));
+      avisar(`Agora ela usa "${m.titulo}"!`);
+    });
+    acoesEl.append(usar);
+    if (m.removivel) {
+      const rem = document.createElement('button');
+      rem.type = 'button';
+      rem.className = 'remover';
+      rem.title = 'Remover este modelo';
+      rem.textContent = '✕';
+      rem.addEventListener('click', async () => mostrarModelos(await api.removerModelo(m.id)));
+      acoesEl.append(rem);
+    }
+    if (ativo) {
+      const selo = document.createElement('span');
+      selo.className = 'selo';
+      selo.textContent = 'em uso';
+      c.append(selo);
+    }
+    c.append(foto, texto, acoesEl);
+    gal.append(c);
+  }
+  // Ajuste do modelo em uso
+  const ativo = estado.lista.find((m) => m.id === estado.ativo);
+  $('#bloco-ajuste').style.display = ativo ? '' : 'none';
+  if (ativo) {
+    $('#nome-ajuste').textContent = ativo.titulo;
+    const b = Number(estado.ajustes?.[ativo.id]?.bracos) || 0;
+    $('#ajuste-bracos').value = b;
+    $('#valor-bracos').textContent = b.toFixed(2);
+  }
+}
+
+function resultadoModelos(r) {
+  const el = $('#res-modelos');
+  const partes = [];
+  if (r.adicionados?.length) partes.push(`${r.adicionados.length} modelo(s) adicionado(s).`);
+  if (r.erros?.length) partes.push('Não deu para adicionar: ' + r.erros.join('; '));
+  el.className = 'resultado ' + (r.erros?.length ? 'erro' : 'ok');
+  el.textContent = partes.join(' ');
+}
+
+$('#btn-add-vrm').addEventListener('click', async () => {
+  const r = await api.adicionarModelos(null);
+  mostrarModelos(r);
+  resultadoModelos(r);
+});
+
+let timerAjuste;
+$('#ajuste-bracos').addEventListener('input', (e) => {
+  const v = Number(e.target.value);
+  $('#valor-bracos').textContent = v.toFixed(2);
+  const id = modelosEstado.ativo;
+  if (!id) return;
+  cfg.ajustes_modelos = { ...(cfg.ajustes_modelos || {}), [id]: { ...(cfg.ajustes_modelos?.[id] || {}), bracos: v } };
+  clearTimeout(timerAjuste);
+  timerAjuste = setTimeout(() => api.ajustarModelo(id, { bracos: v }), 120); // ela muda na hora
+});
+
+// Arrastar arquivos .vrm para a janela
+const zona = $('#soltar');
+document.addEventListener('dragover', (e) => { e.preventDefault(); zona.classList.add('sobre'); });
+document.addEventListener('dragleave', (e) => { if (!e.relatedTarget) zona.classList.remove('sobre'); });
+document.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  zona.classList.remove('sobre');
+  const arquivos = [...(e.dataTransfer?.files || [])];
+  if (!arquivos.length) return;
+  abrirAba('personagem');
+  const r = await api.adicionarModelos(arquivos);
+  mostrarModelos(r);
+  resultadoModelos(r);
 });
 
 // ------------------------------------------------------------------ programas e sites
@@ -249,7 +359,7 @@ async function salvar() {
   const r = await api.salvar(coletar());
   if (r?.ok) {
     cfg = r.cfg;
-    $('#titulo-nome').textContent = cfg.nome || 'Aiko';
+    $('#titulo-nome').textContent = cfg.nome || 'Emy';
     avisar('Salvo!');
   }
 }
@@ -265,7 +375,7 @@ document.addEventListener('keydown', (e) => {
   const sel = $('#provedor');
   for (const [id, p] of Object.entries(dados.provedores)) sel.add(new Option(p.nome, id));
   preencher();
-  $('#modelo-atual').textContent = dados.modeloAtual || 'nenhum (coloque um .vrm na pasta modelos)';
+  mostrarModelos(await api.modelos());
   if (dados.plataforma !== 'win32') $('#aviso-musica').textContent = '(a detecção de música funciona só no Windows)';
   mostrarStatusVoz();
   if (location.hash) abrirAba(location.hash.slice(1));

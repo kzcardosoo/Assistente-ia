@@ -55,17 +55,17 @@ def normalizar(texto):
 
 
 def fonetico(t):
-    """Aproxima a escrita do som em português: "aico" e "aiko" viram a mesma coisa."""
+    """Aproxima a escrita do som em português: "emi" e "emy" viram a mesma coisa."""
     t = t.replace('qu', 'k').replace('ch', 'x').replace('ss', 's').replace('y', 'i').replace('w', 'u')
     t = re.sub(r'c(?=[aou]|$)', 'k', t)
     t = re.sub(r'c(?=[ei])', 's', t)
     t = re.sub(r'h(?![aeiou])|^h', '', t)
-    return t
+    return re.sub(r'(.)\1', r'\1', t)  # letras dobradas: "emmy" -> "emi"
 
 
 def contem_palavra(texto, palavras, limiar=0.8):
     """Procura a palavra de ativação no texto, aceitando pequenas diferenças
-    ("aico", "ai co"...), já que o reconhecimento nem sempre acerta nomes."""
+    ("emi", "e mi"...), já que o reconhecimento nem sempre acerta nomes."""
     tokens = normalizar(texto)
     for palavra in palavras:
         alvo = fonetico(''.join(normalizar(palavra)))
@@ -84,7 +84,7 @@ def contem_palavra(texto, palavras, limiar=0.8):
 
 
 def remover_palavra_inicio(texto, palavras):
-    """Tira o nome da personagem do começo do comando ("Aiko, abre o..." -> "abre o...")."""
+    """Tira o nome da personagem do começo do comando ("Emy, abre o..." -> "abre o...")."""
     t = texto.strip()
     for palavra in sorted(palavras, key=len, reverse=True):
         if not palavra:
@@ -388,7 +388,7 @@ class ServicoVoz:
 
     def palavras(self):
         e = self.cfg['escuta']
-        lista = [e.get('palavra_ativacao') or self.cfg.get('nome') or 'aiko']
+        lista = [e.get('palavra_ativacao') or self.cfg.get('nome') or 'emy']
         lista += [v for v in e.get('variantes') or [] if v]
         return lista
 
@@ -535,7 +535,7 @@ def main():
     parser.add_argument('--sem-microfone', action='store_true')
     args = parser.parse_args()
 
-    cfg = {'nome': 'Aiko', 'escuta': {}, 'voz': {}}
+    cfg = {'nome': 'Emy', 'escuta': {}, 'voz': {}}
     if args.config:
         with open(args.config, encoding='utf-8') as f:
             cfg.update(json.load(f))

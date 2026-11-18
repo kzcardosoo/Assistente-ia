@@ -183,12 +183,12 @@ story.append(T("1. O que vamos construir"))
 story.append(P("Este guia mostra, do zero, como criar uma <b>assistente virtual de desktop</b> com corpo de "
                "personagem feminina de anime. Ela aparece sozinha na tela, sem janela, sem fundo e sem "
                "moldura, como se estivesse em cima da área de trabalho. Nos exemplos ela se chama "
-               "<b>Aiko</b>, mas o nome, a aparência e a personalidade são todos configuráveis."))
+               "<b>Emy</b>, mas o nome, a aparência e a personalidade são todos configuráveis."))
 story.append(S("Funcionalidades"))
 story += B([
     "<b>Conversa com IA</b>: cada usuária conecta a própria chave de uma API gratuita (Google Gemini, Groq, "
     "OpenRouter) ou usa uma IA <b>local e off-line</b> com o Ollama.",
-    "<b>Duas formas de ativar</b>: dizendo a palavra de ativação (\"Aiko\") ou clicando nela para que comece a ouvir.",
+    "<b>Duas formas de ativar</b>: dizendo a palavra de ativação (\"Emy\") ou clicando nela para que comece a ouvir.",
     "<b>Voz feminina realista</b>: Edge TTS (on-line, gratuita, neural) ou Kokoro TTS (off-line).",
     "<b>Ações no computador</b>: abre pesquisas e abas no Google de acordo com os gostos da usuária e abre "
     "programas quando alguém pede.",
@@ -216,7 +216,7 @@ story += tabela([
      "Gemini, Groq, OpenRouter ou Ollama local. Devolve a fala, a emoção e as ações em JSON."],
 ], [32 * mm, 48 * mm, CW - 80 * mm])
 story += code("""
- Usuária fala "Aiko, abre o Spotify"  ou  clica na personagem
+ Usuária fala "Emy, abre o Spotify"  ou  clica na personagem
           |
           v
  [voz.py]  Vosk ouve a palavra de ativação -> grava até silêncio -> Whisper transcreve
@@ -252,7 +252,7 @@ story += B([
 ])
 story.append(S("Estrutura de pastas do projeto"))
 story += code("""
-aiko-assistente/
+emy-assistente/
 |-- package.json
 |-- main.js              <- processo principal do Electron (janela, IA, ações)
 |-- preload.js           <- ponte segura entre o main e a página
@@ -264,7 +264,7 @@ aiko-assistente/
 |   |-- danca.js         <- detecção de música e dança
 |   |-- movimento.js     <- passear pela tela e arrastar
 |   `-- configuracoes.html  <- painel de configurações
-|-- modelos/aiko.vrm
+|-- modelos/emy.vrm
 |-- animacoes/ (danca1.vrma, andar.vrma, acenar.vrma ...)
 `-- python/
     |-- voz.py           <- palavra de ativação, transcrição e voz
@@ -295,7 +295,7 @@ story.append(S("Exportando"))
 story += B([
     "No VRoid Studio: <b>Câmera/Exportar -> Exportar como VRM</b>. Escolha VRM 1.0.",
     "Reduza polígonos/texturas (2048 px é suficiente) para a assistente ficar leve no PC.",
-    "Salve como <b>modelos/aiko.vrm</b>.",
+    "Salve como <b>modelos/emy.vrm</b>.",
 ])
 story += caixa("Use uma personagem <b>original</b>. Modelos baixados do VRoid Hub ou BOOTH têm licença própria: "
                "confira se permitem uso em aplicativos e redistribuição antes de publicar o programa. Não use "
@@ -309,11 +309,15 @@ story.append(P("O VRM usa animações no formato <b>.vrma</b> (VRM Animation). P
 story += caixa("Alternativa 2D: se preferir um estilo \"VTuber 2D\", use um modelo <b>Live2D</b> com a biblioteca "
                "pixi-live2d-display. A lógica do resto do guia (janela, IA, voz, ações) é a mesma; muda só o "
                "arquivo personagem.js.")
+story += caixa("Vários corpos: no projeto pronto (pasta <b>emy-assistente</b>) você pode adicionar quantos modelos .vrm "
+               "quiser em <b>Configurações &gt; Personagem</b> e trocar pelo botão direito &gt; <b>Trocar personagem</b>. "
+               "Como as animações são calculadas por código sobre o esqueleto padrão do VRM, qualquer modelo ganha as "
+               "mesmas funções: boca, piscar, dançar, andar e acenar.")
 story.append(PageBreak())
 
 # ---------------------------------------------------------------- 4
 story.append(T("4. Passo 2 — Projeto Electron e janela transparente"))
-story.append(P("Abra um terminal em uma pasta vazia chamada <b>aiko-assistente</b> e rode:"))
+story.append(P("Abra um terminal em uma pasta vazia chamada <b>emy-assistente</b> e rode:"))
 story += code("""
 npm init -y
 npm install three @pixiv/three-vrm @pixiv/three-vrm-animation
@@ -322,11 +326,11 @@ npm install --save-dev electron electron-builder
 story.append(P("Edite o <b>package.json</b> para ter o ponto de entrada e os scripts:"))
 story += code("""
 {
-  "name": "aiko-assistente",
+  "name": "emy-assistente",
   "version": "1.0.0",
   "main": "main.js",
   "scripts": { "start": "electron .", "dist": "electron-builder" },
-  "build": { "appId": "com.seunome.aiko", "files": ["**/*"],
+  "build": { "appId": "com.seunome.emy", "files": ["**/*"],
              "extraResources": ["python/**", "modelos/**", "animacoes/**"] }
 }
 """, "package.json (trecho)")
@@ -383,7 +387,7 @@ app.on('window-all-closed', () => app.quit());
 """, "main.js — parte 1: a janela")
 story += code("""
 const { contextBridge, ipcRenderer } = require('electron');
-contextBridge.exposeInMainWorld('aiko', {
+contextBridge.exposeInMainWorld('emy', {
   mouseSobre: (v) => ipcRenderer.send('mouse-sobre', v),
   moverJanela: (pos) => ipcRenderer.send('mover-janela', pos),
   infoTela: () => ipcRenderer.invoke('info-tela'),
@@ -457,7 +461,7 @@ const loader = new GLTFLoader();
 loader.register(p => new VRMLoaderPlugin(p));
 loader.register(p => new VRMAnimationLoaderPlugin(p));
 
-const vrm = (await loader.loadAsync('../modelos/aiko.vrm')).userData.vrm;
+const vrm = (await loader.loadAsync('../modelos/emy.vrm')).userData.vrm;
 VRMUtils.removeUnnecessaryVertices(vrm.scene);
 VRMUtils.rotateVRM0(vrm);                          // corrige modelos VRM 0.x
 cena.add(vrm.scene);
@@ -486,7 +490,7 @@ function verificarMouseSobre(x, y) {
   const r = devicePixelRatio;
   gl.readPixels(x * r, (innerHeight - y) * r, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
   const sobre = px[3] > 20;                       // pixel não transparente = personagem
-  if (sobre !== sobreAnterior) { window.aiko.mouseSobre(sobre); sobreAnterior = sobre; }
+  if (sobre !== sobreAnterior) { window.emy.mouseSobre(sobre); sobreAnterior = sobre; }
 }
 
 // ---------- expressões e boca ----------
@@ -535,22 +539,22 @@ animar();
 story += code("""
 // clique = começar a ouvir;  botão direito = abrir configurações
 window.addEventListener('mousedown', (e) => {
-  if (e.button === 2) return window.aiko.abrirConfiguracoes();
+  if (e.button === 2) return window.emy.abrirConfiguracoes();
 });
 window.addEventListener('click', async () => {
   if (foiArrastada()) return;                     // soltou depois de arrastar: não ouvir
-  const cfg = await window.aiko.config();
-  if (cfg.clique_para_ouvir) { mudarEmocao('surpresa', 1200); window.aiko.ouvir(); }
+  const cfg = await window.emy.config();
+  if (cfg.clique_para_ouvir) { mudarEmocao('surpresa', 1200); window.emy.ouvir(); }
 });
 const balao = document.getElementById('balao');
 export function mostrarBalao(texto, ms = 6000) {
   balao.textContent = texto; balao.style.display = 'block';
   clearTimeout(balao._t); balao._t = setTimeout(() => (balao.style.display = 'none'), ms);
 }
-window.aiko.on('estado', (s) => { if (s === 'ouvindo') mostrarBalao('Estou ouvindo...', 3000); });
-window.aiko.on('resposta', (r) => { mostrarBalao(r.fala); mudarEmocao(r.emocao); });
+window.emy.on('estado', (s) => { if (s === 'ouvindo') mostrarBalao('Estou ouvindo...', 3000); });
+window.emy.on('resposta', (r) => { mostrarBalao(r.fala); mudarEmocao(r.emocao); });
 
-const cfg = await window.aiko.config();
+const cfg = await window.emy.config();
 iniciarDanca(cfg);
 iniciarMovimento(cfg);
 """, "renderer/personagem.js — parte 3: interação")
@@ -631,7 +635,7 @@ story.append(P("A parte de áudio fica em um pequeno programa Python, o <b>voz.p
                "junto com o app. Ele faz três coisas:"))
 story += B([
     "<b>Vosk</b> fica ouvindo o microfone o tempo todo, off-line e com pouquíssima CPU, só esperando a "
-    "palavra de ativação (ex.: \"Aiko\").",
+    "palavra de ativação (ex.: \"Emy\").",
     "Quando ouve a palavra, <b>ou quando a usuária clica na personagem</b>, grava até a pessoa parar de falar.",
     "<b>faster-whisper</b> transcreve a frase com ótima precisão em português, também off-line.",
 ])
@@ -735,9 +739,9 @@ const enviarVoz = (obj) => voz.stdin.write(JSON.stringify(obj) + '\\n');
 ipcMain.on('ouvir', () => enviarVoz({ tipo: 'ouvir' }));
 ipcMain.on('fim-fala', () => enviarVoz({ tipo: 'fim_fala' }));
 """, "main.js — parte 2: ligar o voz.py")
-story += caixa("Palavras de ativação curtas e incomuns funcionam melhor (\"Aiko\", \"Yuki\", \"Sakura\"). O Vosk "
+story += caixa("Palavras de ativação curtas e incomuns funcionam melhor (\"Emy\", \"Yuki\", \"Sakura\"). O Vosk "
                "só reconhece palavras que existem no vocabulário do modelo; se o nome não for detectado, "
-               "teste variações de escrita (\"aico\") e coloque as duas na lista.")
+               "teste variações de escrita (\"emi\", \"emmy\") e coloque as duas na lista.")
 story.append(PageBreak())
 
 # ---------------------------------------------------------------- 8
@@ -756,7 +760,7 @@ _kokoro = None
 def falar(texto):
     global _kokoro
     falando.set()
-    base = os.path.join(tempfile.gettempdir(), f'aiko_{int(time.time()*1000)}')
+    base = os.path.join(tempfile.gettempdir(), f'emy_{int(time.time()*1000)}')
     if CFG['motor'] == 'edge':
         import edge_tts
         caminho = base + '.mp3'
@@ -779,7 +783,7 @@ story.append(P("No renderer, tocamos o áudio e usamos um <b>analisador de volum
 story += code("""
 import { setBoca } from './personagem.js';
 const ctx = new AudioContext();
-window.aiko.on('tocar-audio', async (caminho) => {
+window.emy.on('tocar-audio', async (caminho) => {
   const audio = new Audio('file://' + caminho);
   const fonte = ctx.createMediaElementSource(audio);
   const analisador = ctx.createAnalyser(); analisador.fftSize = 512;
@@ -793,8 +797,8 @@ window.aiko.on('tocar-audio', async (caminho) => {
     setBoca(Math.min(1, vol * 3));
     requestAnimationFrame(boca);
   })();
-  const avisar = (v) => window.dispatchEvent(new CustomEvent('aiko-fala', { detail: v }));
-  audio.onended = () => { rodando = false; avisar(false); window.aiko.fimFala(); };
+  const avisar = (v) => window.dispatchEvent(new CustomEvent('emy-fala', { detail: v }));
+  audio.onended = () => { rodando = false; avisar(false); window.emy.fimFala(); };
   avisar(true);
   await audio.play();
 });
@@ -884,8 +888,8 @@ export async function iniciarDanca(cfg) {
 
   let segundosComSom = 0, dancando = false, media = 0, ultimaBatida = 0, intervalo = 0.5;
   let falando = false;                                   // ignora a própria voz dela
-  window.addEventListener('aiko-fala', (e) => (falando = e.detail));
-  window.aiko.on('dancar', () => { segundosComSom = 99; });
+  window.addEventListener('emy-fala', (e) => (falando = e.detail));
+  window.emy.on('dancar', () => { segundosComSom = 99; });
 
   setInterval(() => {
     an.getByteFrequencyData(f);
@@ -908,7 +912,7 @@ export async function iniciarDanca(cfg) {
   }, 100);
 }
 """, "renderer/danca.js")
-story += caixa("O evento <b>aiko-fala</b> (disparado pelo fala.js) evita que ela dance ao som da própria voz. "
+story += caixa("O evento <b>emy-fala</b> (disparado pelo fala.js) evita que ela dance ao som da própria voz. "
                "No macOS a captura de áudio do sistema exige um driver virtual (ex.: BlackHole); "
                "no Windows funciona direto. Tenha várias animações de dança e sorteie uma a cada música.", "aviso")
 story.append(PageBreak())
@@ -929,7 +933,7 @@ export async function iniciarMovimento(cfg) {
   let destino = null, arrastando = false, inicio = null;
 
   async function escolherDestino() {
-    const { area, janela } = await window.aiko.infoTela();
+    const { area, janela } = await window.emy.infoTela();
     const x = area.x + Math.random() * (area.width - janela.width);
     destino = { x, y: area.y + area.height - janela.height };
     vrm.scene.rotation.y = x > janela.x ? Math.PI / 2 : -Math.PI / 2;  // vira para o lado
@@ -943,13 +947,13 @@ export async function iniciarMovimento(cfg) {
 
   setInterval(async () => {
     if (!destino || arrastando) return;
-    const { janela } = await window.aiko.infoTela();
+    const { janela } = await window.emy.infoTela();
     const dx = destino.x - janela.x, passo = 2.2;              // pixels por quadro
     if (Math.abs(dx) < passo) {
       destino = null; andar.fadeOut(0.3); vrm.scene.rotation.y = 0;   // volta a olhar pra frente
       return;
     }
-    window.aiko.moverJanela({ x: janela.x + Math.sign(dx) * passo, y: destino.y });
+    window.emy.moverJanela({ x: janela.x + Math.sign(dx) * passo, y: destino.y });
   }, 16);
 
   // arrastar com o botão esquerdo segurado
@@ -959,10 +963,10 @@ export async function iniciarMovimento(cfg) {
   });
   window.addEventListener('mousemove', async (e) => {
     if (!arrastando) return;
-    const { janela } = await window.aiko.infoTela();
+    const { janela } = await window.emy.infoTela();
     const dx = e.screenX - inicio.x, dy = e.screenY - inicio.y;
     if (Math.abs(dx) + Math.abs(dy) > 3) { moveuNoArraste = true; mudarEmocao('surpresa', 800); }
-    window.aiko.moverJanela({ x: janela.x + dx, y: janela.y + dy });
+    window.emy.moverJanela({ x: janela.x + dx, y: janela.y + dy });
     inicio.x = e.screenX; inicio.y = e.screenY;
   });
   window.addEventListener('mouseup', () => { arrastando = false; destino = null; });
@@ -1009,14 +1013,14 @@ story.append(P("Todas as funções ficam em um arquivo <b>config.json</b> salvo 
                "na personagem ou pelo ícone na bandeja do sistema."))
 story += code("""
 {
-  "nome": "Aiko",
+  "nome": "Emy",
   "nome_usuaria": "Ana",
   "personalidade": "alegre, carinhosa, um pouco brincalhona, fala português do Brasil",
   "interesses": ["animes", "música pop", "games"],
   "ia": { "provedor": "gemini", "modelo": "gemini-2.5-flash", "chave": "" },
   "voz_ativa": true,
   "voz": { "motor": "edge", "voz_edge": "pt-BR-FranciscaNeural", "velocidade": "+0%",
-           "tom": "+15Hz", "ativacao_por_voz": true, "palavra_ativacao": "aiko",
+           "tom": "+15Hz", "ativacao_por_voz": true, "palavra_ativacao": "emy",
            "modelo_vosk": "modelos/vosk-model-small-pt-0.3", "modelo_whisper": "small" },
   "clique_para_ouvir": true,
   "abrir_sites": true,
@@ -1091,7 +1095,7 @@ story += code("""
 <script>
   const $ = (id) => document.getElementById(id);
   let cfg;
-  window.aiko.config().then(c => { cfg = c;
+  window.emy.config().then(c => { cfg = c;
     $('dancar').checked = c.dancar; $('andar').checked = c.andar;
     $('com_ativo').checked = c.comentarios.ativo; $('com_int').value = c.comentarios.intervalo_min;
     $('provedor').value = c.ia.provedor; $('chave').value = c.ia.chave; });
@@ -1099,7 +1103,7 @@ story += code("""
     cfg.dancar = $('dancar').checked; cfg.andar = $('andar').checked;
     cfg.comentarios = { ativo: $('com_ativo').checked, intervalo_min: +$('com_int').value };
     cfg.ia.provedor = $('provedor').value; cfg.ia.chave = $('chave').value;
-    window.aiko.salvarConfig(cfg);
+    window.emy.salvarConfig(cfg);
   };
 </script>
 """, "renderer/configuracoes.html (trecho)")

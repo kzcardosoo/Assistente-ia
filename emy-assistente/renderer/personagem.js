@@ -67,7 +67,7 @@ export class Personagem {
   }
 
   // ---------------------------------------------------------------- carregamento
-  async carregar(url, animacoes = []) {
+  async carregar(url, animacoes = [], ajuste = {}) {
     if (!this.renderer) {
       throw new Error('Não consegui ligar os gráficos 3D (WebGL). Atualize o driver da placa de vídeo e reinicie o app.');
     }
@@ -88,6 +88,9 @@ export class Personagem {
     if (vrm.lookAt) vrm.lookAt.target = this.alvoOlhar;
 
     this.animador = new Animador(vrm);
+    this.animador.ajuste = { ...ajuste };
+    this.animador.definirEstado(this.estado, this.direcao || 0); // continua o que estava fazendo (dançando, andando...)
+    this.recursosRosto(vrm);
     this.animador.update(0.016, true);
     vrm.update(0.016);
     this.medir();
@@ -150,7 +153,24 @@ export class Personagem {
   // ---------------------------------------------------------------- controle
   definirEstado(estado, direcao = 0) {
     this.estado = estado;
+    this.direcao = direcao;
     this.animador?.definirEstado(estado, direcao);
+  }
+
+  ajustar(ajuste) {
+    if (this.animador) this.animador.ajuste = { ...ajuste };
+  }
+
+  // Nem todo modelo tem as mesmas expressões: descobre o que existe para usar alternativas.
+  recursosRosto(vrm) {
+    const em = vrm.expressionManager;
+    const tem = (n) => !!em?.getExpression(n);
+    this.rosto = {
+      boca: BOCAS.some(tem),
+      piscar: tem('blink'),
+      piscarLados: tem('blinkLeft') && tem('blinkRight'),
+      mandibula: vrm.humanoid.getNormalizedBoneNode('jaw'),
+    };
   }
 
   gesto(nome) { this.animador?.gestoAgora(nome); }
@@ -291,7 +311,13 @@ export class Personagem {
         piscar = Math.sin(Math.max(0, this.piscada.restante) / 0.16 * Math.PI);
       }
     }
-    em.setValue('blink', piscar);
+    if (this.rosto.piscar || !this.rosto.piscarLados) em.setValue('blink', piscar);
+    else { em.setValue('blinkLeft', piscar); em.setValue('blinkRight', piscar); }
     for (const b of BOCAS) em.setValue(b, this.boca[b]);
+    // Modelo sem formas de boca: abre a mandíbula (osso "jaw") no lugar
+    if (!this.rosto.boca && this.rosto.mandibula) {
+      const abre = Math.max(this.boca.aa, this.boca.oh, this.boca.ou * 0.7, this.boca.ee * 0.5, this.boca.ih * 0.4) * 0.3;
+      this.rosto.mandibula.rotation.x = this.animador.inverter ? -abre : abre;
+    }
   }
 }

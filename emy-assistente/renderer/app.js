@@ -4,7 +4,7 @@ import { Personagem } from './personagem.js';
 import { Fala } from './fala.js';
 import { DetectorMusica } from './musica.js';
 
-const api = window.aiko;
+const api = window.emy;
 const $ = (s) => document.querySelector(s);
 const canvas = $('#tela');
 const balao = $('#balao');
@@ -158,6 +158,14 @@ window.addEventListener('contextmenu', (e) => {
 });
 aviso.addEventListener('click', () => api.menu());
 
+// Soltar um arquivo .vrm em cima dela troca o corpo (e adiciona à galeria)
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const arquivos = [...(e.dataTransfer?.files || [])].filter((f) => f.name.toLowerCase().endsWith('.vrm'));
+  if (arquivos.length) api.soltarModelos(arquivos);
+});
+
 // ------------------------------------------------------------------ caixa de texto
 function abrirTexto() {
   caixaTexto.classList.remove('oculto');
@@ -256,13 +264,13 @@ api.on('config', (c) => aplicarConfig(c));
 // ------------------------------------------------------------------ configuração e modelo
 function mostrarAviso(erro) {
   aviso.innerHTML = erro
-    ? `<b>Não consegui carregar meu corpo.</b><br>${erro}<br><br>Clique aqui e abra as Configurações para escolher outro modelo .vrm.`
-    : '<b>Cadê meu corpo?</b><br>Coloque um modelo <b>.vrm</b> na pasta <b>modelos</b> do app ou escolha um em ' +
+    ? `<b>Não consegui carregar meu corpo.</b><br>${erro}<br><br>Clique aqui e use <b>Trocar personagem</b> para escolher outro modelo.`
+    : '<b>Cadê meu corpo?</b><br>Arraste um arquivo <b>.vrm</b> para cá ou adicione um em ' +
       '<b>Configurações &gt; Personagem</b>.<br><br>Clique aqui para abrir o menu.';
   aviso.classList.remove('oculto');
 }
 
-async function carregarModelo(url, animacoes) {
+async function carregarModelo(url, animacoes, ajuste) {
   modeloUrl = url;
   if (!url) {
     mostrarAviso();
@@ -270,7 +278,7 @@ async function carregarModelo(url, animacoes) {
     return;
   }
   try {
-    await personagem.carregar(url, animacoes);
+    await personagem.carregar(url, animacoes, ajuste);
     aviso.classList.add('oculto');
     atualizarEstado();
     api.modeloCarregado(true);
@@ -290,11 +298,15 @@ async function aplicarConfig(novo) {
   atualizarEstado();
   const animAntes = JSON.stringify(antigo?.animacoes || []);
   if (!antigo || cfg.modeloUrl !== modeloUrl || JSON.stringify(cfg.animacoes) !== animAntes) {
-    await carregarModelo(cfg.modeloUrl, cfg.animacoes);
+    const trocou = !!antigo && !!modeloUrl && cfg.modeloUrl !== modeloUrl;
+    await carregarModelo(cfg.modeloUrl, cfg.animacoes, cfg.ajusteModelo);
+    if (trocou && personagem.vrm) { personagem.gesto('acenar'); personagem.emocao('feliz', 2500); }
+  } else {
+    personagem.ajustar(cfg.ajusteModelo || {});
   }
 }
 
 aplicarConfig(await api.pronto());
 
 // Ganchos para testes automatizados
-window.__aiko = { personagem, fala, musica, flags, mostrarBalao, atualizarEstado };
+window.__emy = { personagem, fala, musica, flags, mostrarBalao, atualizarEstado };

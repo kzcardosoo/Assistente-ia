@@ -1,6 +1,6 @@
 {
-  "name": "aiko-assistente",
-  "productName": "Aiko Assistente",
+  "name": "emy-assistente",
+  "productName": "Emy Assistente",
   "version": "1.0.0",
   "description": "Assistente virtual anime para desktop: ouve, fala, conversa com IA gratuita ou local, abre sites e programas, dança e passeia pela tela.",
   "main": "main.js",
@@ -13,8 +13,8 @@
     "prestart": "node scripts/copiar-addons.js"
   },
   "build": {
-    "appId": "com.assistente.aiko",
-    "productName": "Aiko Assistente",
+    "appId": "com.assistente.emy",
+    "productName": "Emy Assistente",
     "files": [
       "main.js",
       "preload.js",

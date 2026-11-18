@@ -1,5 +1,5 @@
 {
-  "nome": "Aiko",
+  "nome": "Emy",
   "nome_usuario": "",
   "personalidade": "alegre, carinhosa, curiosa e um pouco brincalhona; fala português do Brasil de um jeito natural e leve",
   "interesses": ["animes", "música", "games"],
@@ -20,6 +20,7 @@
     "memoria_mensagens": 16
   },
   "modelo_vrm": "",
+  "ajustes_modelos": {},
   "tamanho": 1.0,
   "voz": {
     "ativa": true,
@@ -33,8 +34,8 @@
   "escuta": {
     "clique_para_ouvir": true,
     "ativacao_por_voz": true,
-    "palavra_ativacao": "aiko",
-    "variantes": ["aico", "aiko"],
+    "palavra_ativacao": "emy",
+    "variantes": ["emi", "emmy"],
     "modelo_whisper": "small",
     "sensibilidade": 0.5,
     "microfone": null

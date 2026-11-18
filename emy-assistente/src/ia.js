@@ -147,7 +147,7 @@ async function chamar(cfg, mensagens, { json = true, timeoutMs } = {}) {
 
   const headers = { 'Content-Type': 'application/json' };
   if (cfg.ia.chave) headers.Authorization = 'Bearer ' + cfg.ia.chave;
-  if (cfg.ia.provedor === 'openrouter') headers['X-Title'] = 'Aiko Assistente';
+  if (cfg.ia.provedor === 'openrouter') headers['X-Title'] = 'Emy Assistente';
 
   const corpoBase = {
     model: cfg.ia.modelo || p.modelo,
