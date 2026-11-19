@@ -18,4 +18,11 @@ contextBridge.exposeInMainWorld('cfgApi', {
   escolherPrograma: () => ipcRenderer.invoke('cfg-escolher-programa'),
   abrirLink: (url) => ipcRenderer.invoke('cfg-abrir-link', url),
   abrirPasta: (qual) => ipcRenderer.invoke('cfg-abrir-pasta', qual),
+  iaLocal: () => ipcRenderer.invoke('cfg-ia-local'),
+  prepararIALocal: (modelo) => ipcRenderer.invoke('cfg-ia-local-preparar', modelo),
+  testarMicrofone: () => ipcRenderer.invoke('cfg-testar-microfone'),
+  abrirLog: () => ipcRenderer.invoke('cfg-abrir-log'),
+  on: (canal, fn) => {
+    if (['ia-local', 'nivel-mic'].includes(canal)) ipcRenderer.on(canal, (_e, d) => fn(d));
+  },
 });

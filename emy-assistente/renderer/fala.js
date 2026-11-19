@@ -14,6 +14,8 @@ export class Fala {
     this.url = null;
     this.ativa = false;
     this.navegador = false;
+    this.fila = [];
+    this.pendentesNavegador = 0;
     this.vozes = [];
     if ('speechSynthesis' in window) {
       const carregar = () => { this.vozes = speechSynthesis.getVoices(); };
@@ -28,11 +30,17 @@ export class Fala {
     return this.ctx;
   }
 
-  async tocar(dados, mime = 'audio/mpeg', volume = 1) {
-    this.interromper();
+  // Toca um trecho de fala. Se já estiver falando, entra na fila (as frases chegam aos poucos).
+  tocar(dados, mime = 'audio/mpeg', volume = 1) {
+    const item = { dados, mime, volume };
+    if (this.ativa && !this.navegador) { this.fila.push(item); return; }
+    this.tocarAgora(item);
+  }
+
+  async tocarAgora({ dados, mime, volume }) {
     const ctx = this.contexto();
-    const blob = new Blob([dados], { type: mime });
-    this.url = URL.createObjectURL(blob);
+    if (this.url) URL.revokeObjectURL(this.url);
+    this.url = URL.createObjectURL(new Blob([dados], { type: mime }));
     const audio = new Audio(this.url);
     const fonte = ctx.createMediaElementSource(audio);
     const analisador = ctx.createAnalyser();
@@ -47,15 +55,19 @@ export class Fala {
     this.analisador = analisador;
     this.freq = new Uint8Array(analisador.frequencyBinCount);
     this.navegador = false;
-    audio.onended = () => this.terminar();
-    audio.onerror = () => this.terminar();
-    this.ativa = true;
-    this.aoIniciar?.();
+    const proximo = () => {
+      if (this.audio !== audio) return;
+      const item = this.fila.shift();
+      if (item) this.tocarAgora(item); else this.terminar();
+    };
+    audio.onended = proximo;
+    audio.onerror = proximo;
+    if (!this.ativa) { this.ativa = true; this.aoIniciar?.(); }
     try {
       await audio.play();
     } catch (e) {
       console.warn('Não consegui tocar o áudio:', e.message);
-      this.terminar();
+      proximo();
     }
   }
 
@@ -65,9 +77,9 @@ export class Fala {
       this.vozes.find((v) => /^pt/i.test(v.lang)) || null;
   }
 
+  // Voz do sistema (reserva). Os trechos entram na fila do próprio navegador.
   falarNavegador(texto, { volume = 1, velocidade = 0, tom = 0 } = {}) {
     if (!('speechSynthesis' in window) || !texto) return;
-    this.interromper();
     const u = new SpeechSynthesisUtterance(texto);
     u.lang = 'pt-BR';
     const voz = this.escolherVoz();
@@ -75,12 +87,21 @@ export class Fala {
     u.rate = Math.max(0.5, Math.min(2, 1 + Number(velocidade || 0) / 100));
     u.pitch = Math.max(0, Math.min(2, 1.1 + Number(tom || 0) / 60));
     u.volume = Math.max(0, Math.min(1, Number(volume) || 1));
-    u.onstart = () => { this.ativa = true; this.navegador = true; this.aoIniciar?.(); };
-    u.onend = () => this.terminar();
-    u.onerror = () => this.terminar();
+    this.pendentesNavegador += 1;
+    const comecar = () => {
+      if (this.ativa) { this.navegador = true; return; }
+      this.ativa = true; this.navegador = true; this.aoIniciar?.();
+    };
+    const acabar = () => {
+      this.pendentesNavegador = Math.max(0, this.pendentesNavegador - 1);
+      if (this.pendentesNavegador === 0) this.terminar();
+    };
+    u.onstart = comecar;
+    u.onend = acabar;
+    u.onerror = acabar;
     speechSynthesis.speak(u);
     // Alguns sistemas não disparam onstart: garante o estado
-    setTimeout(() => { if (speechSynthesis.speaking && !this.ativa) u.onstart(); }, 300);
+    setTimeout(() => { if (speechSynthesis.speaking && !this.ativa) comecar(); }, 300);
   }
 
   terminar() {
@@ -94,7 +115,11 @@ export class Fala {
   }
 
   interromper() {
-    if (this.audio) { try { this.audio.pause(); } catch { /* ignore */ } }
+    this.fila = [];
+    this.pendentesNavegador = 0;
+    const a = this.audio;
+    this.audio = null;
+    if (a) { try { a.pause(); } catch { /* ignore */ } }
     if ('speechSynthesis' in window && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel();
     this.terminar();
   }

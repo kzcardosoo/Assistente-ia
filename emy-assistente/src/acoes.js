@@ -100,23 +100,4 @@ async function executar(acao, cfg) {
   }
 }
 
-// Comandos simples entendidos sem IA (usados quando a IA não está configurada ou falhou).
-function comandoLocal(texto, cfg) {
-  const t = normalizar(texto);
-  let m = t.match(/^(?:por favor )?(?:abr[ea]|abrir|inici[ae]|iniciar|execut[ae]|executar|liga|ligar)\s+(?:o |a |os |as )?(.+)$/);
-  if (m) {
-    const alvo = m[1].replace(/ (pra|para) mim$/, '');
-    const prog = cfg.acoes.abrir_programas && acharNaLista(alvo, cfg.programas);
-    if (prog) return { fala: `Abrindo ${prog.nome}!`, emocao: 'feliz', acoes: [{ tipo: 'abrir_programa', nome: prog.nome }] };
-    const site = cfg.acoes.abrir_sites && acharNaLista(alvo, cfg.sites_favoritos);
-    if (site) return { fala: `Abrindo ${site.nome}!`, emocao: 'feliz', acoes: [{ tipo: 'abrir_site', nome: site.nome }] };
-  }
-  m = t.match(/^(?:pesquis[ae]|pesquisar|procur[ae]|procurar|busc[ae]|buscar)\s+(?:por |sobre )?(.+)$/);
-  if (m && cfg.acoes.abrir_sites) return { fala: 'Pesquisando agora!', emocao: 'feliz', acoes: [{ tipo: 'pesquisar', termo: m[1] }] };
-  m = t.match(/^(?:toca|tocar|coloca|bota)\s+(.+)$/);
-  if (m && cfg.acoes.abrir_sites) return { fala: 'Vou procurar no YouTube!', emocao: 'feliz', acoes: [{ tipo: 'youtube', termo: m[1] }] };
-  if (/\bdanc(a|ar|e)\b/.test(t) && cfg.vida.dancar) return { fala: 'Bora dançar!', emocao: 'feliz', acoes: [{ tipo: 'dancar' }] };
-  return null;
-}
-
-module.exports = { executar, comandoLocal, normalizar, acharNaLista, abrirUrl, abrirPrograma };
+module.exports = { executar, normalizar, acharNaLista, abrirUrl, abrirPrograma };

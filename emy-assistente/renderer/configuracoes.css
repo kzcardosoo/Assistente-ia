@@ -211,3 +211,8 @@ footer {
 
 .soltar.sobre { border-color: var(--rosa); background: rgba(255, 95, 174, 0.08); color: var(--texto); }
 .soltar button { margin-left: 8px; }
+
+.barra { height: 8px; margin: 8px 0; border-radius: 4px; background: var(--campo); overflow: hidden; }
+.barra > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--rosa), var(--roxo)); transition: width 0.15s; }
+#bloco-local { margin: 10px 0; }
+#bloco-local label { margin: 10px 0 4px; }

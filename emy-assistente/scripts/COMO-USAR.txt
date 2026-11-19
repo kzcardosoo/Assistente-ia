@@ -14,14 +14,13 @@ COMO ABRIR
 Ela aparece no canto da tela. Na primeira vez, as Configurações abrem
 sozinhas na aba "IA".
 
-ESCOLHER A INTELIGÊNCIA ARTIFICIAL (só na primeira vez)
-  O jeito mais fácil e grátis é o Google Gemini:
-  1. Entre em https://aistudio.google.com/apikey com sua conta Google
-  2. Clique em "Create API key" e copie a chave
-  3. Nas Configurações > IA, escolha "Google Gemini", cole a chave,
-     clique em "Testar conexão" e depois em "Salvar"
-  Também funcionam: Groq, OpenRouter (grátis com chave) ou Ollama /
-  LM Studio (IA no seu PC, sem internet; precisam ser instalados à parte).
+A INTELIGÊNCIA ARTIFICIAL JÁ VEM INCLUÍDA
+  A Emy já vem com uma IA própria (Ollama) que roda no seu PC, sem chave
+  e sem conta. Na PRIMEIRA vez que abrir, ela baixa o "cérebro" dela
+  (cerca de 0,8 GB) e mostra o progresso no balão. Depois disso funciona
+  até sem internet.
+  Se quiser, dá para trocar por uma IA on-line grátis (Gemini, Groq...)
+  em Configurações > IA.
 
 COMO USAR
   - Fale "Emy, ..." (ex.: "Emy, pesquisa receitas de bolo")
@@ -34,12 +33,19 @@ COMO USAR
     Configurações > Personagem
 
 O QUE PRECISA DE INTERNET
-  - A IA on-line (Gemini, Groq, OpenRouter)
+  - Só uma vez: baixar o cérebro da IA local (0,8 GB)
+  - A IA on-line, se você escolher uma (Gemini, Groq, OpenRouter)
   - A voz realista (Edge). Sem internet ela usa a voz do Windows.
   O reconhecimento do nome e da sua fala funciona sem internet.
 
 INICIAR JUNTO COM O WINDOWS
   Configurações > Sistema > "Iniciar junto com o computador".
+
+SE ELA NÃO ESTIVER OUVINDO
+  Configurações > Ouvir > "Testar microfone". O teste diz se o som não
+  chega (privacidade do Windows), se está baixo ou se é o microfone errado.
+  Se algo der errado, Configurações > Sistema > "Abrir registro (log)" e
+  mande o conteúdo para quem está te ajudando.
 
 PARA REMOVER
   Feche a Emy (botão direito > Sair) e apague a pasta "Emy".

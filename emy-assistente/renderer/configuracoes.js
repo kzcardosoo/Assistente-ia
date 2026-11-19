@@ -74,7 +74,15 @@ function atualizarProvedor(trocouAgora) {
     $('#lista-modelos').innerHTML = '';
   }
   $('#bloco-chave').style.display = p.precisaChave || sel.value === 'personalizado' ? '' : 'none';
-  $('#bloco-url').style.display = sel.value === 'personalizado' || p.local ? '' : 'none';
+  $('#bloco-url').style.display = sel.value === 'personalizado' || (p.local && !p.embutido) ? '' : 'none';
+  $('#bloco-local').style.display = p.embutido ? '' : 'none';
+  campoModelo.closest('label').style.display = p.embutido ? 'none' : '';
+  $('#btn-listar-modelos').style.display = p.embutido ? 'none' : '';
+  if (p.embutido) {
+    const sel2 = $('#modelo-local');
+    if (![...sel2.options].some((o) => o.value === campoModelo.value)) sel2.add(new Option(campoModelo.value, campoModelo.value));
+    sel2.value = campoModelo.value || p.modelo;
+  }
   $('#bloco-url input').placeholder = p.base || 'http://localhost:1234/v1';
   const dicas = {
     gemini: 'Ex.: gemini-2.5-flash. Clique em "Buscar modelos" depois de colar a chave para ver a lista atual.',
@@ -83,6 +91,7 @@ function atualizarProvedor(trocouAgora) {
     ollama: 'Instale o Ollama e baixe um modelo, ex.: "ollama pull qwen2.5:7b". Funciona sem internet.',
     lmstudio: 'Abra o LM Studio, carregue um modelo e ligue o servidor local.',
     personalizado: 'Qualquer serviço compatível com a API da OpenAI.',
+    emy: '',
   };
   $('#dica-modelo').textContent = dicas[sel.value] || '';
 }
@@ -122,6 +131,56 @@ $('#btn-testar-ia').addEventListener('click', (e) => comBotao(e.target, async ()
   res.textContent = r.mensagem;
 }));
 
+// ------------------------------------------------------------------ IA local
+function mostrarIALocal(r) {
+  if (!r) return;
+  const textos = {
+    ausente: 'A IA local não veio nesta versão do app.',
+    parado: 'IA local parada.',
+    iniciando: 'Iniciando a IA local...',
+    baixando: `Baixando a inteligência (só na primeira vez): ${r.progresso}%`,
+    pronto: `Pronta! Usando ${r.modelo}.`,
+    erro: 'Erro: ' + (r.erro || 'desconhecido'),
+  };
+  const el = $('#estado-local');
+  el.textContent = textos[r.estado] || r.estado;
+  el.className = r.estado === 'pronto' ? 'ok' : r.estado === 'erro' || r.estado === 'ausente' ? 'erro' : '';
+  $('#barra-local').style.width = (r.estado === 'pronto' ? 100 : r.estado === 'baixando' ? r.progresso : 0) + '%';
+}
+api.on('ia-local', mostrarIALocal);
+$('#modelo-local').addEventListener('change', async (e) => {
+  $('#modelo-ia').value = e.target.value;
+  cfg = coletar();
+  await api.salvar(cfg); // já começa a preparar o modelo escolhido
+  mostrarIALocal(await api.prepararIALocal(e.target.value));
+});
+
+// ------------------------------------------------------------------ teste do microfone
+api.on('nivel-mic', (m) => { $('#barra-mic').style.width = Math.round(Math.min(1, m.nivel * 1.5) * 100) + '%'; });
+$('#btn-testar-mic').addEventListener('click', (e) => comBotao(e.target, async () => {
+  const res = $('#res-mic');
+  res.className = 'resultado';
+  res.textContent = 'Fale alguma coisa agora...';
+  const r = await api.testarMicrofone();
+  $('#barra-mic').style.width = '0%';
+  if (r.erro) { res.className = 'resultado erro'; res.textContent = 'Microfone indisponível: ' + r.erro; return; }
+  const nome = r.microfone ? ` (${r.microfone})` : '';
+  if (r.ok) {
+    res.className = 'resultado ok';
+    res.textContent = `Ouvi: "${r.texto}"${nome}`;
+  } else if (!r.pico) {
+    res.className = 'resultado erro';
+    res.textContent = `Não chegou som nenhum${nome}. Veja se o Windows permite apps acessarem o microfone e se o microfone certo está escolhido.`;
+  } else if (r.pico < 1500) {
+    res.className = 'resultado erro';
+    res.textContent = `O som chegou muito baixo${nome}. Aumente o volume do microfone no Windows ou fale mais perto.`;
+  } else {
+    res.className = 'resultado erro';
+    res.textContent = `Chegou som${nome}, mas não entendi as palavras. Tente de novo falando mais devagar.`;
+  }
+}));
+$('#btn-log').addEventListener('click', () => api.abrirLog());
+
 // ------------------------------------------------------------------ voz e microfone
 $('#btn-testar-voz').addEventListener('click', () => api.testarVoz(coletar().voz));
 
@@ -150,7 +209,7 @@ function mostrarStatusVoz() {
     item(r.ativacao, 'Palavra de ativação (Vosk)', r.erros?.ativacao || 'rode instalar.bat para baixar o modelo'),
     item(!!r.transcricao, 'Transcrição' + (r.transcricao ? ` (${r.transcricao})` : ''), r.erros?.transcricao),
     item(r.tts?.edge, 'Voz Edge TTS', 'pip install edge-tts'),
-    item(r.tts?.kokoro, 'Voz off-line Kokoro (opcional)', 'pip install kokoro soundfile'),
+    r.tts?.kokoro ? item(true, 'Voz off-line Kokoro') : '<div>– Voz off-line Kokoro: opcional, não incluída (sem internet ela usa a voz do Windows)</div>',
   ].join('');
 }
 
@@ -378,5 +437,6 @@ document.addEventListener('keydown', (e) => {
   mostrarModelos(await api.modelos());
   if (dados.plataforma !== 'win32') $('#aviso-musica').textContent = '(a detecção de música funciona só no Windows)';
   mostrarStatusVoz();
+  mostrarIALocal(await api.iaLocal());
   if (location.hash) abrirAba(location.hash.slice(1));
 })();

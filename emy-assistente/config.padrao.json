@@ -2,22 +2,33 @@
   "nome": "Emy",
   "nome_usuario": "",
   "personalidade": "alegre, carinhosa, curiosa e um pouco brincalhona; fala português do Brasil de um jeito natural e leve",
-  "interesses": ["animes", "música", "games"],
+  "interesses": [
+    "animes",
+    "música",
+    "games"
+  ],
   "sites_favoritos": {
     "youtube": "https://www.youtube.com",
     "gmail": "https://mail.google.com"
   },
   "programas": {
-    "bloco de notas": { "caminho": "notepad.exe", "args": [] },
-    "calculadora": { "caminho": "calc.exe", "args": [] }
+    "bloco de notas": {
+      "caminho": "notepad.exe",
+      "args": []
+    },
+    "calculadora": {
+      "caminho": "calc.exe",
+      "args": []
+    }
   },
   "ia": {
-    "provedor": "gemini",
-    "modelo": "gemini-2.5-flash",
+    "provedor": "emy",
+    "modelo": "gemma3:1b",
     "chave": "",
     "url_personalizada": "",
     "temperatura": 0.8,
-    "memoria_mensagens": 16
+    "memoria_mensagens": 16,
+    "placa_de_video": true
   },
   "modelo_vrm": "",
   "ajustes_modelos": {},
@@ -35,8 +46,19 @@
     "clique_para_ouvir": true,
     "ativacao_por_voz": true,
     "palavra_ativacao": "emy",
-    "variantes": ["emi", "emmy", "amy"],
-    "variantes_rapidas": { "emy": ["me", "eme", "emi", "emy"] },
+    "variantes": [
+      "emi",
+      "emmy",
+      "amy"
+    ],
+    "variantes_rapidas": {
+      "emy": [
+        "me",
+        "eme",
+        "emi",
+        "emy"
+      ]
+    },
     "modelo_whisper": "base",
     "sensibilidade": 0.5,
     "microfone": null
@@ -64,5 +86,6 @@
   "nao_perturbe": false,
   "iniciar_com_sistema": false,
   "python": "",
-  "primeira_execucao": true
+  "primeira_execucao": true,
+  "versao_config": 0
 }

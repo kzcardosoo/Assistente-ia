@@ -44,6 +44,10 @@
       {
         "from": "animacoes",
         "to": "animacoes"
+      },
+      {
+        "from": "ollama",
+        "to": "ollama"
       }
     ],
     "win": {

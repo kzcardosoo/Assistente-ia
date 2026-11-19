@@ -14,6 +14,8 @@ const ia = require('./src/ia');
 const acoes = require('./src/acoes');
 const frases = require('./src/frases');
 const { Voz } = require('./src/voz');
+const { OllamaEmbutido } = require('./src/ollama');
+const intencoes = require('./src/intencoes');
 const { Modelos } = require('./src/modelos');
 
 const RAIZ = __dirname;
@@ -33,13 +35,29 @@ let win = null;          // janela da personagem
 let janelaConfig = null; // janela de configurações
 let tray = null;
 let voz = null;
+let ollama = null;      // IA local que vem junto com o app
 
 const estado = {
   falando: false, ouvindo: false, pensando: false, dancando: false, dormindo: false,
   arrastando: false, modoTexto: false, mouseSobre: false, modeloPronto: false,
 };
 
-const log = (...a) => console.log('[emy]', ...a);
+// Registro (log): aparece no terminal e fica salvo em emy.log na pasta de dados do app,
+// para dar para entender problemas que só acontecem no computador de quem usa.
+let arquivoLog = null;
+function registrar(linha) {
+  const texto = `${new Date().toISOString().slice(0, 19).replace('T', ' ')} ${linha}`;
+  console.log(texto);
+  try {
+    if (!arquivoLog) {
+      arquivoLog = path.join(app.getPath('userData'), 'emy.log');
+      fs.mkdirSync(path.dirname(arquivoLog), { recursive: true });
+      if (fs.existsSync(arquivoLog) && fs.statSync(arquivoLog).size > 2 * 1024 * 1024) fs.renameSync(arquivoLog, arquivoLog + '.1');
+    }
+    fs.appendFileSync(arquivoLog, texto + '\n');
+  } catch { /* sem disco: só no terminal */ }
+}
+const log = (...a) => registrar('[emy] ' + a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' '));
 const dirModelosUsuario = () => path.join(app.getPath('userData'), 'modelos');
 let bibliotecaModelos = null;
 const modelos = () => (bibliotecaModelos ||= new Modelos({ pastaApp: path.join(RECURSOS, 'modelos'), pastaUsuario: dirModelosUsuario() }));
@@ -323,6 +341,7 @@ function agendarPasseio() {
 
 // ------------------------------------------------------------------ conversa
 let idConversa = 0;
+let falaAtual = 0; // só toca o áudio da conversa mais recente
 
 function limparParaFala(texto) {
   return String(texto || '')
@@ -333,25 +352,51 @@ function limparParaFala(texto) {
     .trim();
 }
 
-function falar(texto, cfg = config.ler()) {
+// Fala um trecho. Vários trechos da mesma conversa entram na fila e tocam em sequência.
+function falar(texto, cfg = config.ler(), id = ++idConversa) {
   const limpo = limparParaFala(texto);
   if (!cfg.voz.ativa || !limpo) return;
   pararAndar();
+  falaAtual = id;
   if (voz && voz.disponivel && voz.recursos?.tts?.[cfg.voz.motor] !== false) {
-    voz.enviar({ tipo: 'falar', texto: limpo, id: ++idConversa });
+    voz.enviar({ tipo: 'falar', texto: limpo, id });
   } else {
-    enviar('falar-navegador', { texto: limpo, volume: cfg.voz.volume, velocidade: cfg.voz.velocidade, tom: cfg.voz.tom });
+    enviar('falar-navegador', { texto: limpo, id, volume: cfg.voz.volume, velocidade: cfg.voz.velocidade, tom: cfg.voz.tom });
   }
 }
 
-async function responder(resp, cfg) {
-  enviar('resposta', { fala: resp.fala, emocao: resp.emocao });
-  falar(resp.fala, cfg);
-  for (const acao of resp.acoes || []) {
+// Cala o que ela estava falando (nova pergunta chegou)
+function calar(id) {
+  falaAtual = id;
+  enviar('interromper');
+  if (voz) voz.enviar({ tipo: 'cancelar_fala' });
+}
+
+async function executarAcoes(lista, cfg) {
+  for (const acao of lista || []) {
+    if (acao.tipo === 'nao_perturbe') { config.atualizar((c) => { c.nao_perturbe = !!acao.valor; }); continue; }
+    if (acao.tipo === 'parar_danca') { enviar('acao', 'parar_danca'); continue; }
     const r = await acoes.executar(acao, cfg);
     log('ação', acao.tipo, r.descricao || (r.ok ? 'ok' : 'não executada'));
     if (r.ok && r.renderer) enviar('acao', r.renderer);
   }
+}
+
+async function responder(resp, cfg, id = ++idConversa) {
+  enviar('resposta', { fala: resp.fala, emocao: resp.emocao });
+  falar(resp.fala, cfg, id);
+  await executarAcoes(resp.acoes, cfg);
+}
+
+function estadoIALocal(cfg) {
+  if (!ia.PROVEDORES[cfg.ia.provedor]?.embutido) return null;
+  if (!ollama || !ollama.existe) return { fala: 'A IA local não veio nesta versão do app. Escolha outra IA nas Configurações.', emocao: 'triste' };
+  if (ollama.estado === 'baixando') return { fala: `Ainda estou baixando minha inteligência (${ollama.progresso}%). Já já eu converso com você!`, emocao: 'relaxada' };
+  if (ollama.estado === 'erro') {
+    iniciarIALocal(cfg);
+    return { fala: 'Minha IA local teve um probleminha e estou reiniciando ela. Tenta de novo em alguns segundos.', emocao: 'triste' };
+  }
+  return null;
 }
 
 async function processar(texto) {
@@ -364,25 +409,95 @@ async function processar(texto) {
   log('usuário:', texto);
   pararAndar();
   const meuId = ++idConversa;
+  calar(meuId);
+
+  // 1) Comandos diretos (abrir, pesquisar, tocar, horas...): resposta na hora, sem IA
+  const local = intencoes.interpretar(texto, cfg);
+  if (local) {
+    log(`${cfg.nome} (comando):`, local.fala, JSON.stringify(local.acoes));
+    await responder(local, cfg, meuId);
+    return;
+  }
+
+  // 2) Conversa com a IA
   let resp;
+  let falouDuranteFluxo = false;
+  const aviso = estadoIALocal(cfg);
   if (!ia.configurada(cfg)) {
-    resp = acoes.comandoLocal(texto, cfg) || { fala: ia.mensagemDeErro({ tipo: 'sem_chave' }, cfg), emocao: 'triste', acoes: [] };
+    resp = { fala: ia.mensagemDeErro({ tipo: 'sem_chave' }, cfg), emocao: 'triste', acoes: [] };
+  } else if (aviso) {
+    resp = { ...aviso, acoes: [] };
   } else {
     estado.pensando = true;
     enviar('pensando', true);
+    const inicio = Date.now();
+    let parcial = '';
     try {
-      resp = await ia.perguntar(texto, cfg);
+      resp = await ia.perguntar(texto, cfg, {
+        aoFrase: (frase) => {
+          if (meuId !== idConversa) return;
+          if (!falouDuranteFluxo) {
+            log(`primeira frase em ${Date.now() - inicio} ms`);
+            estado.pensando = false;
+            enviar('pensando', false);
+          }
+          falouDuranteFluxo = true;
+          parcial = (parcial + ' ' + frase).trim();
+          enviar('resposta-parcial', { texto: parcial });
+          falar(frase, cfg, meuId);
+        },
+      });
+      log(`resposta completa em ${Date.now() - inicio} ms`);
     } catch (e) {
       log('erro da IA:', e.message, e.detalhe ? JSON.stringify(e.detalhe) : '');
-      resp = acoes.comandoLocal(texto, cfg) || { fala: ia.mensagemDeErro(e, cfg), emocao: 'triste', acoes: [] };
+      resp = { fala: ia.mensagemDeErro(e, cfg), emocao: 'triste', acoes: [] };
+      falouDuranteFluxo = false;
     } finally {
       estado.pensando = false;
       enviar('pensando', false);
     }
   }
   if (meuId !== idConversa) return; // chegou outra pergunta no meio do caminho
-  log(`${cfg.nome}:`, resp.fala, resp.acoes.length ? JSON.stringify(resp.acoes) : '');
-  await responder(resp, cfg);
+  log(`${cfg.nome}:`, resp.fala, resp.acoes?.length ? JSON.stringify(resp.acoes) : '');
+  enviar('resposta', { fala: resp.fala, emocao: resp.emocao });
+  if (!falouDuranteFluxo) falar(resp.fala, cfg, meuId);
+  await executarAcoes(resp.acoes, cfg);
+}
+
+// ------------------------------------------------------------------ IA local (Ollama embutido)
+function iniciarIALocal(cfg = config.ler()) {
+  if (!ollama || !ollama.existe || !ia.PROVEDORES[cfg.ia.provedor]?.embutido) return;
+  const modelo = cfg.ia.modelo || ia.PROVEDORES.emy.modelo;
+  if (ollama.estado === 'pronto' && ollama.modeloPronto === modelo) return;
+  log('preparando IA local:', modelo);
+  ollama.preparar(modelo, { usarPlacaDeVideo: cfg.ia.placa_de_video !== false }).then(() => log('IA local pronta')).catch(() => {});
+}
+
+function criarIALocal() {
+  ollama = new OllamaEmbutido({
+    raiz: RAIZ, recursos: RECURSOS, dadosUsuario: app.getPath('userData'), porta: ia.PORTA_EMBUTIDA,
+    log: (...a) => registrar(a.join(' ')),
+  });
+  let baixou = false;
+  ollama.on('estado', (r) => {
+    if (r.estado === 'baixando') baixou = true;
+    enviar('ia-local', { ...r, baixou });
+    if (janelaConfig && !janelaConfig.isDestroyed()) janelaConfig.webContents.send('ia-local', r);
+    if (r.estado === 'pronto' && baixou) {
+      baixou = false;
+      const cfg = config.ler();
+      responder({ fala: 'Pronto! Minha inteligência está instalada. Agora é só falar comigo!', emocao: 'feliz', acoes: [{ tipo: 'acenar' }] }, cfg);
+    }
+  });
+  // Quem estava sem nenhuma IA configurada (ou vindo da versão antiga) passa a usar a IA local
+  const cfg = config.ler();
+  if (ollama.existe && ((cfg.versao_config || 0) < 3 || !ia.configurada(cfg))) {
+    config.atualizar((c) => {
+      if (!ia.configurada(c) || (c.versao_config || 0) < 3) { c.ia.provedor = 'emy'; c.ia.modelo = ia.PROVEDORES.emy.modelo; }
+      c.versao_config = 3;
+    });
+  }
+  iniciarIALocal();
 }
 
 function iniciarEscuta() {
@@ -411,7 +526,7 @@ function abrirModoTexto() {
 // ------------------------------------------------------------------ módulo de voz (Python)
 function iniciarVoz() {
   voz = new Voz({ raiz: RAIZ, recursos: RECURSOS, dadosUsuario: app.getPath('userData') });
-  voz.on('log', (l) => console.log(l.startsWith('[voz]') ? l : '[voz] ' + l));
+  voz.on('log', (l) => registrar(l.startsWith('[voz]') ? l : '[voz] ' + l));
   voz.on('pronto', (r) => { log('módulo de voz pronto:', JSON.stringify(r)); enviar('config', configPublica()); });
   voz.on('recursos', (r) => log('recursos de voz:', JSON.stringify(r)));
   voz.on('indisponivel', (erro) => { log(erro); enviar('config', configPublica()); });
@@ -427,25 +542,30 @@ function iniciarVoz() {
     if (estado.falando) enviar('interromper');
   });
   voz.on('texto', (m) => { estado.ouvindo = false; processar(m.texto); });
+  voz.on('nivel', (m) => { if (janelaConfig && !janelaConfig.isDestroyed()) janelaConfig.webContents.send('nivel-mic', m); });
   voz.on('erro', (m) => {
     log('erro de voz:', m.origem, m.mensagem);
     if (m.origem === 'microfone') {
       enviar('resposta', { fala: frases.semMicrofone(), emocao: 'triste', curto: true });
       abrirModoTexto();
+    } else if (m.origem === 'microfone_mudo') {
+      enviar('resposta', { fala: m.mensagem, emocao: 'triste', ms: 15000 });
     }
   });
   voz.on('audio', (m) => {
+    if (m.id != null && m.id !== falaAtual) { fs.unlink(m.caminho, () => {}); return; } // fala antiga: descarta
     fs.readFile(m.caminho, (err, dados) => {
       if (err) return log('áudio não encontrado:', m.caminho);
       const mime = m.caminho.endsWith('.wav') ? 'audio/wav' : 'audio/mpeg';
-      enviar('tocar-audio', { dados, mime, volume: config.ler().voz.volume });
+      enviar('tocar-audio', { dados, mime, id: m.id, volume: config.ler().voz.volume });
       fs.unlink(m.caminho, () => {});
     });
   });
   voz.on('erro_tts', (m) => {
     log('voz falhou, usando a voz do sistema:', m.mensagem);
+    if (m.id != null && m.id !== falaAtual) return;
     const cfg = config.ler();
-    enviar('falar-navegador', { texto: m.texto, volume: cfg.voz.volume, velocidade: cfg.voz.velocidade, tom: cfg.voz.tom });
+    enviar('falar-navegador', { texto: m.texto, id: m.id, volume: cfg.voz.volume, velocidade: cfg.voz.velocidade, tom: cfg.voz.tom });
   });
   voz.iniciar(config.ler());
 }
@@ -587,6 +707,17 @@ function aplicarConfig(cfg) {
   }
   enviar('config', configPublica(cfg));
   if (voz) voz.configurar(cfg);
+  if (ollama && ia.PROVEDORES[cfg.ia.provedor]?.embutido) {
+    const gpu = cfg.ia.placa_de_video !== false;
+    if (ollama.gpu !== undefined && ollama.gpu !== gpu && ollama.estado === 'pronto') {
+      ollama.gpu = gpu;
+      ollama.estado = 'parado';
+      ollama.reiniciar({ usarPlacaDeVideo: gpu }).then(() => iniciarIALocal(cfg)).catch(() => {});
+    } else {
+      ollama.gpu = gpu;
+      iniciarIALocal(cfg);
+    }
+  }
   agendarComentario();
   agendarPasseio();
   try { app.setLoginItemSettings({ openAtLogin: !!cfg.iniciar_com_sistema }); } catch { /* não suportado */ }
@@ -661,7 +792,24 @@ function registrarIPCConfig() {
     ia.limparHistorico();
     return { ok: true, cfg };
   });
-  ipcMain.handle('cfg-testar-ia', (_e, cfgTemp) => ia.testar(cfgTemp));
+  ipcMain.handle('cfg-testar-ia', async (_e, cfgTemp) => {
+    if (ia.PROVEDORES[cfgTemp.ia.provedor]?.embutido) {
+      const aviso = estadoIALocal(cfgTemp);
+      if (aviso) return { ok: false, mensagem: aviso.fala };
+      if (ollama.estado !== 'pronto') return { ok: false, mensagem: 'A IA local ainda está iniciando. Espere alguns segundos.' };
+    }
+    return ia.testar(cfgTemp);
+  });
+  ipcMain.handle('cfg-ia-local', () => (ollama ? ollama.resumo() : { estado: 'ausente', existe: false }));
+  ipcMain.handle('cfg-ia-local-preparar', (_e, modelo) => {
+    const cfg = config.ler();
+    if (modelo) cfg.ia.modelo = modelo;
+    cfg.ia.provedor = 'emy';
+    iniciarIALocal(cfg);
+    return ollama ? ollama.resumo() : null;
+  });
+  ipcMain.handle('cfg-testar-microfone', () => (voz ? voz.testarMicrofone() : { ok: false, erro: 'Módulo de voz desligado' }));
+  ipcMain.handle('cfg-abrir-log', () => (arquivoLog ? shell.openPath(arquivoLog) : false));
   ipcMain.handle('cfg-listar-modelos', (_e, cfgTemp) => ia.listarModelos(cfgTemp));
   ipcMain.handle('cfg-listar-microfones', () => (voz ? voz.listarMicrofones() : []));
   ipcMain.handle('cfg-testar-voz', (_e, vozTemp) => {
@@ -758,7 +906,9 @@ if (!app.requestSingleInstanceLock()) {
     iniciarCursor();
     iniciarMovimento();
     iniciarSono();
+    log(`iniciando ${app.getName()} ${app.getVersion()} (${process.platform}, empacotado: ${app.isPackaged})`);
     iniciarVoz();
+    criarIALocal();
     agendarComentario();
     agendarPasseio();
     config.eventos.on('mudou', aplicarConfig);
@@ -774,6 +924,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
     if (voz) voz.parar();
+    if (ollama) ollama.parar();
   });
 }
 

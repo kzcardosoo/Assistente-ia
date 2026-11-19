@@ -4,7 +4,7 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const CANAIS = [
   'config', 'cursor', 'resposta', 'pensando', 'estado-escuta', 'tocar-audio', 'falar-navegador',
-  'interromper', 'acao', 'andar', 'parar-andar', 'arrastada', 'cair', 'dormir', 'modo-texto',
+  'interromper', 'acao', 'resposta-parcial', 'ia-local', 'andar', 'parar-andar', 'arrastada', 'cair', 'dormir', 'modo-texto',
 ];
 
 contextBridge.exposeInMainWorld('emy', {

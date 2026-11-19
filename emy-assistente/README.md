@@ -10,7 +10,8 @@ Todas as funções podem ser ligadas e desligadas nas Configurações.
 |---|---|
 | Só ela na tela | Janela transparente, sem moldura, sempre por cima. Cliques no espaço vazio passam para o que está atrás. |
 | Ouvir | Clique nela, diga o nome dela ("Emy, ..." ou "Ei Emy, ...") ou use **Ctrl + Alt + A**. Tudo roda no seu PC: o Vosk fica atento ao nome e o Whisper confirma e transcreve. Se você disser só "Emy?", ela responde "Sim?" e espera o pedido. |
-| Conversar | Gemini, Groq ou OpenRouter (grátis, com a sua chave), ou Ollama / LM Studio (local, off-line). |
+| Conversar | IA local incluída (Ollama + gemma3, sem chave e sem internet depois de instalada), ou Gemini, Groq, OpenRouter (grátis, com a sua chave). A resposta é falada frase por frase enquanto a IA ainda está escrevendo. |
+| Comandos rápidos | "Abre o...", "pesquisa...", "toca... no YouTube", "dança", "que horas são" são entendidos direto pelo app, sem esperar a IA. |
 | Voz feminina | Edge TTS (neural, on-line e gratuita) ou Kokoro (off-line). Se nenhuma funcionar, usa a voz do sistema. A boca acompanha a fala. |
 | Abrir sites | Pesquisa no Google e no YouTube, abre seus sites favoritos e sugere coisas do seu gosto. |
 | Abrir programas | Só os que você cadastrar na lista (por segurança). |
@@ -26,6 +27,7 @@ Baixe o **`Emy-portatil-windows.zip`**, descompacte em qualquer pasta sua e dê 
 
 - Não instala nada e **não precisa de administrador**.
 - Já vem com tudo: o app, a personagem Emy, um Python próprio, o reconhecimento de voz em português (Vosk + Whisper base) e a voz.
+- Já vem com uma **IA local (Ollama)**: não precisa de chave nem de conta. Na primeira vez ela baixa o modelo `gemma3:1b` (~0,8 GB) mostrando o progresso; depois funciona sem internet.
 - Se o Windows mostrar "O Windows protegeu o computador", clique em **Mais informações > Executar assim mesmo** (o programa não tem assinatura digital paga).
 - Para remover, apague a pasta. As configurações ficam em `%APPDATA%\Emy Assistente`.
 

@@ -59,8 +59,21 @@
     <!-- ======================= IA ======================= -->
     <section id="aba-ia" class="aba">
       <h1>Inteligência artificial</h1>
-      <p class="dica">Escolha uma IA gratuita on-line (cada pessoa usa a própria chave) ou uma IA local que funciona sem internet.</p>
+      <p class="dica">A <b>IA da Emy</b> já vem no app e funciona sem internet e sem chave. Se preferir, use uma IA on-line gratuita com a sua chave.</p>
       <label>Provedor <select data-campo="ia.provedor" id="provedor"></select></label>
+      <div id="bloco-local" class="status">
+        <div id="estado-local">Verificando a IA local...</div>
+        <div class="barra"><div id="barra-local"></div></div>
+        <label>Modelo da IA local
+          <select id="modelo-local">
+            <option value="gemma3:1b">Rápida (gemma3 1B, baixa 0,8 GB) — recomendada</option>
+            <option value="qwen2.5:3b">Equilibrada (qwen2.5 3B, baixa 1,9 GB)</option>
+            <option value="gemma3:4b">Mais esperta (gemma3 4B, baixa 3,3 GB, precisa de PC bom)</option>
+          </select>
+          <small>O modelo é baixado uma única vez e fica guardado no seu PC.</small>
+        </label>
+        <label class="chave"><input data-campo="ia.placa_de_video" type="checkbox"> Usar a placa de vídeo quando der (mais rápido; desligue se der erro)</label>
+      </div>
       <div id="bloco-chave">
         <label>Chave da API
           <div class="com-botao">
@@ -150,6 +163,10 @@
           <button type="button" id="btn-microfones">Atualizar</button>
         </div>
       </label>
+      <h2>Testar o microfone</h2>
+      <p class="dica">Clique, fale uma frase e veja se ela entende. Ajuda a descobrir se o microfone está mudo, baixo ou é o errado.</p>
+      <div class="linha"><button type="button" id="btn-testar-mic" class="destaque">Testar microfone</button><span id="res-mic" class="resultado"></span></div>
+      <div class="barra"><div id="barra-mic"></div></div>
       <p class="dica">Atalho para ouvir de qualquer lugar: <b>Ctrl + Alt + A</b>.</p>
     </section>
 
@@ -210,7 +227,9 @@
         <button type="button" data-pasta="modelos">Abrir pasta de modelos</button>
         <button type="button" data-pasta="animacoes">Abrir pasta de animações</button>
         <button type="button" data-pasta="dados">Abrir pasta de dados</button>
+        <button type="button" id="btn-log">Abrir registro (log)</button>
       </div>
+      <p class="dica">Se algo não funcionar, abra o <b>registro (log)</b> e mande o conteúdo para quem está te ajudando.</p>
       <p class="dica">Coloque animações <b>.vrma</b> na pasta de animações com "danca", "andar" ou "acenar" no nome para usá-las no lugar das animações automáticas.</p>
     </section>
   </main>

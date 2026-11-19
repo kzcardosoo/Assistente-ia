@@ -20,12 +20,12 @@ let modeloUrl = null;
 // ------------------------------------------------------------------ estado
 const flags = {
   arrastada: false, caindo: false, dormindo: false, andando: 0,
-  musica: false, dancaAte: 0, pensando: false, ouvindo: false,
+  musica: false, dancaAte: 0, pensando: false, ouvindo: false, semDancar: false,
 };
 let dancandoInformado = false;
 
 function atualizarEstado() {
-  const dancando = cfg?.vida?.dancar !== false && (flags.musica || performance.now() < flags.dancaAte);
+  const dancando = cfg?.vida?.dancar !== false && ((flags.musica && !flags.semDancar) || performance.now() < flags.dancaAte);
   if (dancando !== dancandoInformado) {
     dancandoInformado = dancando;
     api.dancando(dancando);
@@ -110,7 +110,7 @@ personagem.fonteBoca = () => fala.boca();
 // ------------------------------------------------------------------ música
 const musica = new DetectorMusica({
   aoComecar: () => { flags.musica = true; atualizarEstado(); },
-  aoParar: () => { flags.musica = false; atualizarEstado(); },
+  aoParar: () => { flags.musica = false; flags.semDancar = false; atualizarEstado(); },
 });
 
 async function atualizarMusica() {
@@ -211,10 +211,25 @@ api.on('cursor', ({ x, y }) => {
   }
 });
 
+// A resposta da IA chega aos poucos: o balão vai mostrando o que ela já disse
+let textoParcial = '';
+api.on('resposta-parcial', ({ texto }) => {
+  flags.pensando = false;
+  atualizarEstado();
+  textoParcial = texto;
+  clearTimeout(timerBalao);
+  clearInterval(timerDigitar);
+  balao.className = 'interativo';
+  balaoTexto.textContent = texto;
+  posicionarBalao();
+});
+
 api.on('resposta', (r) => {
   flags.pensando = false;
   atualizarEstado();
-  if (r.fala) mostrarBalao(r.fala, { ms: r.ms });
+  const jaMostrado = textoParcial && r.fala && r.fala.startsWith(textoParcial.slice(0, 20));
+  textoParcial = '';
+  if (r.fala) mostrarBalao(r.fala, { ms: r.ms, digitar: !jaMostrado });
   personagem.emocao(r.emocao || 'neutra', r.curto ? 2500 : 5000);
 });
 
@@ -245,7 +260,8 @@ api.on('falar-navegador', (o) => fala.falarNavegador(o.texto, o));
 api.on('interromper', () => fala.interromper());
 
 api.on('acao', (a) => {
-  if (a === 'dancar') { flags.dancaAte = performance.now() + 15000; atualizarEstado(); }
+  if (a === 'dancar') { flags.semDancar = false; flags.dancaAte = performance.now() + 15000; atualizarEstado(); }
+  else if (a === 'parar_danca') { flags.dancaAte = 0; flags.semDancar = true; atualizarEstado(); }
   else if (a === 'acenar') personagem.gesto('acenar');
   else if (a === 'reagir') { personagem.gesto('reagir'); personagem.emocao('feliz', 1500); }
 });
@@ -261,6 +277,15 @@ api.on('cair', (v) => {
 api.on('dormir', dormir);
 api.on('modo-texto', (v) => (v ? abrirTexto() : fecharTexto()));
 api.on('config', (c) => aplicarConfig(c));
+
+// Download da IA local (só na primeira vez)
+api.on('ia-local', (r) => {
+  if (r.estado === 'baixando') {
+    mostrarBalao(`Baixando minha inteligência (só na primeira vez)... ${r.progresso}%`, { ms: 0, digitar: false });
+  } else if (r.estado === 'erro' && r.erro) {
+    mostrarBalao('Minha IA local deu erro: ' + r.erro, { ms: 9000, digitar: false });
+  }
+});
 
 // ------------------------------------------------------------------ configuração e modelo
 function mostrarAviso(erro) {

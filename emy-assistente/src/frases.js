@@ -26,7 +26,7 @@ function semMicrofone() {
 }
 
 function primeiraVez(cfg) {
-  return `Oi! Eu sou a ${cfg.nome}! Clica com o botão direito em mim e abre as Configurações para escolher minha IA.`;
+  return `Oi! Eu sou a ${cfg.nome}! Pode me chamar pelo nome ou clicar em mim. Clique com o botão direito para ver o que eu sei fazer.`;
 }
 
 module.exports = { saudacao, voltou, naoOuvi, semMicrofone, primeiraVez, sortear };

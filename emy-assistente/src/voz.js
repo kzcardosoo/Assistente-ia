@@ -147,6 +147,11 @@ class Voz extends EventEmitter {
         if (espera) { espera(msg.lista || []); this.esperas.delete('microfones'); }
         break;
       }
+      case 'teste_mic': {
+        const espera = this.esperas.get('teste_mic');
+        if (espera) { espera(msg); this.esperas.delete('teste_mic'); }
+        break;
+      }
       default:
         this.emit(msg.tipo, msg);
     }
@@ -167,6 +172,15 @@ class Voz extends EventEmitter {
       if (!this.enviar({ tipo: 'listar_microfones' })) return resolve([]);
       const t = setTimeout(() => { this.esperas.delete('microfones'); resolve([]); }, 5000);
       this.esperas.set('microfones', (lista) => { clearTimeout(t); resolve(lista); });
+    });
+  }
+
+  // Teste das Configurações: grava uma frase e devolve o volume e o texto entendido
+  testarMicrofone() {
+    return new Promise((resolve) => {
+      if (!this.enviar({ tipo: 'teste_mic' })) return resolve({ ok: false, erro: this.erro || 'Módulo de voz desligado' });
+      const t = setTimeout(() => { this.esperas.delete('teste_mic'); resolve({ ok: false, erro: 'O teste demorou demais.' }); }, 25000);
+      this.esperas.set('teste_mic', (r) => { clearTimeout(t); resolve(r); });
     });
   }
 
