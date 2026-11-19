@@ -68,6 +68,9 @@ let historico = [];
 
 function provedor(cfg) {
   const p = { ...(PROVEDORES[cfg.ia.provedor] || PROVEDORES.personalizado) };
+  // A IA que vem no app tem endereço fixo: um endereço digitado antes (ex.: o do Gemini)
+  // não pode mandar os pedidos para outro lugar.
+  if (p.embutido) return p;
   if (cfg.ia.provedor === 'personalizado' || (cfg.ia.url_personalizada && p.local)) {
     if (cfg.ia.url_personalizada) p.base = cfg.ia.url_personalizada.replace(/\/+$/, '');
   }
@@ -280,7 +283,8 @@ async function chamar(cfg, mensagens, { json = true, timeoutMs, aoPedaco, maxTok
   if (p.precisaChave && !cfg.ia.chave) throw new ErroIA('sem_chave', 'Chave da API não configurada');
 
   const headers = { 'Content-Type': 'application/json' };
-  if (cfg.ia.chave) headers.Authorization = 'Bearer ' + cfg.ia.chave;
+  // a chave só vai para quem precisa dela (nunca para a IA local)
+  if (cfg.ia.chave && (p.precisaChave || cfg.ia.provedor === 'personalizado')) headers.Authorization = 'Bearer ' + cfg.ia.chave;
   if (cfg.ia.provedor === 'openrouter') headers['X-Title'] = 'Emy Assistente';
 
   const modelo = cfg.ia.modelo || p.modelo;
@@ -433,10 +437,10 @@ async function testar(cfg) {
       { role: 'user', content: 'Diga oi em uma frase curta, em português.' },
     ], { timeoutMs: 120000 });
     const r = normalizarResposta(extrairJSON(bruto));
-    return { ok: true, mensagem: 'Conectado! Resposta: ' + (r.fala || bruto).slice(0, 160) };
+    return { ok: true, mensagem: `Conectado a ${provedor(cfg).base} (${cfg.ia.modelo || provedor(cfg).modelo})! Resposta: ` + (r.fala || bruto).slice(0, 160) };
   } catch (e) {
     const extra = e.detalhe?.texto ? ' — ' + e.detalhe.texto.slice(0, 200) : (typeof e.detalhe === 'string' ? ' — ' + e.detalhe : '');
-    return { ok: false, mensagem: mensagemDeErro(e, cfg) + extra };
+    return { ok: false, mensagem: mensagemDeErro(e, cfg) + ` [${provedor(cfg).base}]` + extra };
   }
 }
 

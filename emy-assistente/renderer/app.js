@@ -19,7 +19,7 @@ let modeloUrl = null;
 
 // ------------------------------------------------------------------ estado
 const flags = {
-  arrastada: false, caindo: false, dormindo: false, andando: 0,
+  arrastada: false, caindo: false, dormindo: false, andando: 0, saltitar: false,
   musica: false, dancaAte: 0, pensando: false, ouvindo: false, semDancar: false,
 };
 let dancandoInformado = false;
@@ -39,7 +39,10 @@ function atualizarEstado() {
   else if (dancando) estado = 'dancando';
   else if (flags.pensando) estado = 'pensando';
   else if (flags.ouvindo) estado = 'ouvindo';
-  if (estado !== personagem.estado || direcao !== (personagem.animador?.direcao ?? 0)) personagem.definirEstado(estado, direcao);
+  const saltitar = estado === 'andando' && flags.saltitar;
+  if (estado !== personagem.estado || direcao !== (personagem.animador?.direcao ?? 0) || saltitar !== !!personagem.animador?.saltitar) {
+    personagem.definirEstado(estado, direcao, { saltitar });
+  }
   canvas.classList.toggle('ouvindo', flags.ouvindo);
 }
 
@@ -266,7 +269,7 @@ api.on('acao', (a) => {
   else if (a === 'reagir') { personagem.gesto('reagir'); personagem.emocao('feliz', 1500); }
 });
 
-api.on('andar', ({ direcao }) => { flags.andando = direcao || 1; atualizarEstado(); });
+api.on('andar', ({ direcao, saltitar }) => { flags.andando = direcao || 1; flags.saltitar = !!saltitar; atualizarEstado(); });
 api.on('parar-andar', () => { flags.andando = 0; atualizarEstado(); });
 api.on('arrastada', (v) => { flags.arrastada = v; atualizarEstado(); });
 api.on('cair', (v) => {

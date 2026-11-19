@@ -298,8 +298,10 @@ function passear(forcar = false) {
   const max = a.x + a.width - b.width * 0.8;
   let alvoX = b.x;
   for (let i = 0; i < 10 && Math.abs(alvoX - b.x) < 150; i++) alvoX = min + Math.random() * (max - min);
-  movimento = { tipo: 'andar', alvoX };
-  enviar('andar', { direcao: Math.sign(alvoX - b.x) || 1 });
+  // às vezes vai saltitando (mais rápido); primeiro vira para o lado, depois acelera
+  const saltitar = Math.random() < 0.25;
+  movimento = { tipo: 'andar', alvoX, x: b.x, vel: 0, max: saltitar ? 2.4 : 1.5, espera: 18 };
+  enviar('andar', { direcao: Math.sign(alvoX - b.x) || 1, saltitar });
 }
 
 function iniciarMovimento() {
@@ -318,14 +320,20 @@ function iniciarMovimento() {
       }
       mover(b.x, y);
     } else if (movimento.tipo === 'andar') {
-      const vel = 1.5 * escala;
-      const dx = movimento.alvoX - b.x;
-      if (Math.abs(dx) <= vel) {
-        mover(movimento.alvoX, b.y);
+      const m = movimento;
+      if (m.espera > 0) { m.espera -= 1; return; } // tempo de virar o corpo
+      const max = m.max * escala;
+      const dx = m.alvoX - m.x;
+      const distanciaFreio = (m.vel * m.vel) / (2 * 0.05 * escala) + 2;
+      // acelera no começo e freia perto do destino
+      m.vel = Math.abs(dx) <= distanciaFreio ? Math.max(0.3 * escala, m.vel - 0.05 * escala) : Math.min(max, m.vel + 0.05 * escala);
+      if (Math.abs(dx) <= m.vel) {
+        mover(m.alvoX, b.y);
         movimento = null;
         enviar('parar-andar');
       } else {
-        mover(b.x + Math.sign(dx) * vel, b.y);
+        m.x += Math.sign(dx) * m.vel;
+        mover(m.x, b.y);
       }
     }
   }, 16);

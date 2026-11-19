@@ -89,7 +89,7 @@ export class Personagem {
 
     this.animador = new Animador(vrm);
     this.animador.ajuste = { ...ajuste };
-    this.animador.definirEstado(this.estado, this.direcao || 0); // continua o que estava fazendo (dançando, andando...)
+    this.animador.definirEstado(this.estado, this.direcao || 0, this.opcoesEstado || {}); // continua o que estava fazendo (dançando, andando...)
     this.recursosRosto(vrm);
     this.animador.update(0.016, true);
     vrm.update(0.016);
@@ -151,10 +151,11 @@ export class Personagem {
   }
 
   // ---------------------------------------------------------------- controle
-  definirEstado(estado, direcao = 0) {
+  definirEstado(estado, direcao = 0, opcoes = {}) {
     this.estado = estado;
     this.direcao = direcao;
-    this.animador?.definirEstado(estado, direcao);
+    this.opcoesEstado = opcoes;
+    this.animador?.definirEstado(estado, direcao, opcoes);
   }
 
   ajustar(ajuste) {
@@ -243,7 +244,10 @@ export class Personagem {
     const cabeca = this.vrm.humanoid.getNormalizedBoneNode('head');
     const posCabeca = cabeca ? cabeca.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(0, this.centroY, 0);
 
-    if (this.estado === 'pensando') {
+    const olharGesto = this.animador.olharDoGesto();
+    if (olharGesto) {
+      alvo.set(posCabeca.x + Math.sin(olharGesto.yaw) * 1.5, posCabeca.y + olharGesto.pitch, posCabeca.z + Math.cos(olharGesto.yaw) * 1.5);
+    } else if (this.estado === 'pensando') {
       alvo.set(posCabeca.x + 0.5, posCabeca.y + 0.6, posCabeca.z + 1);
     } else if (this.olharMouse && this.cursor.t && agora - this.cursor.t < 6000) {
       const ppu = window.innerHeight / this.visivel; // pixels por metro no plano da personagem
