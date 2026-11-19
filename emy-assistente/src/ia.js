@@ -110,9 +110,10 @@ function promptCompacto(cfg) {
     `Você é ${cfg.nome}, uma assistente virtual de anime que vive no computador de ${usuario}.`,
     `Personalidade: ${cfg.personalidade}.`,
     cfg.interesses?.length ? `${usuario} gosta de: ${cfg.interesses.join(', ')}.` : '',
-    `Hoje é ${data}, ${hora}.`,
     'Responda sempre em português do Brasil, com no máximo 2 frases curtas, naturais e corretas. Sem emojis, sem listas.',
     'Responda somente com JSON: {"fala": "sua resposta", "emocao": "feliz|triste|brava|surpresa|relaxada|neutra"}',
+    // data e hora por último: o começo do texto fica igual entre perguntas e a IA reaproveita o que já leu
+    `Agora: ${data}, ${hora}.`,
   ].filter(Boolean).join('\n');
 }
 

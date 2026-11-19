@@ -240,7 +240,9 @@ class Sintetizador:
             erros = []
             for m in ordem:
                 try:
+                    inicio = time.time()
                     caminho = self._edge(texto) if m == 'edge' else self._kokoro(texto)
+                    log(f'voz ({m}) gerada em {time.time() - inicio:.1f}s')
                     if geracao != self.geracao:  # cancelado enquanto gerava
                         os.remove(caminho)
                         break
@@ -415,6 +417,13 @@ class ServicoVoz:
         self.erros = {}
         self.pedido_teste = threading.Event()
         self.pico_longo = 3000.0  # para o ganho automático
+        # detector de nome pelo Whisper: escuta o começo de cada fala
+        self.em_fala = False
+        self.ja_avaliado = False
+        self.inicio_fala = []
+        self.silencio_fala = 0.0
+        self.fim_comando = 0.0
+        self.pedido_pela_metade = ''
         self.avisou_mudo = False
         self.blocos_lidos = 0
         self.arquivo_teste = arquivo_teste
@@ -568,18 +577,71 @@ class ServicoVoz:
             nivel = float(np.sqrt(np.mean(amostras.astype(np.float32) ** 2))) if amostras.size else 0.0
             if not self.falando.is_set() and nivel < self.ruido * 2.5:
                 self.ruido = self.ruido * 0.97 + nivel * 0.03
+            if self.verificar_inicio_de_fala(dados, nivel):
+                continue
 
             escuta = self.cfg['escuta']
             if (self.detector and escuta.get('ativacao_por_voz', True) and not self.falando.is_set()
                     and time.time() - self.fim_fala > 0.6):
                 sens = float(escuta.get('sensibilidade', 0.5))
                 forca = self.detector.processar(dados, self.palavras(), self.palavras_rapidas(), 0.9 - 0.2 * sens)
-                if forca == 'forte':
+                if forca == 'forte' and time.time() - self.fim_comando > 1.0:
                     enviar(tipo='ativacao')
                     self.ouvir_comando(por_voz=True)
-                elif forca == 'fraco' and self.tem_whisper():
-                    # parecido com o nome: escuta em silêncio e só reage se o Whisper confirmar
-                    self.ouvir_comando(por_voz=True, mostrar=False)
+
+    def verificar_inicio_de_fala(self, dados, nivel):
+        """Quando alguém começa a falar depois de um silêncio, o Whisper ouve o primeiro 1,5 s
+        e confere se é o nome dela. Muito mais confiável que o Vosk para um nome curto como
+        "Emy" (que o Vosk escuta como "me", "em mil", "e me"...). Devolve True se ativou."""
+        escuta = self.cfg['escuta']
+        if (not escuta.get('ativacao_por_voz', True) or not self.tem_whisper() or self.falando.is_set()
+                or time.time() - self.fim_fala < 0.6 or time.time() - self.fim_comando < 1.0):
+            self.em_fala = False
+            return False
+        sens = float(escuta.get('sensibilidade', 0.5))
+        limiar = max(self.ruido * (3.2 - 1.4 * sens), 160 - 60 * sens)
+        passo = len(dados) / 2 / TAXA
+        if not self.em_fala:
+            if nivel > limiar:
+                self.em_fala, self.ja_avaliado, self.silencio_fala = True, False, 0.0
+                self.inicio_fala = list(self.anterior)[-4:]  # inclui 0,3 s antes (começo da palavra)
+            return False
+        self.silencio_fala = 0.0 if nivel > limiar else self.silencio_fala + passo
+        if self.silencio_fala >= 0.7:  # a fala acabou
+            self.em_fala = False
+        if self.ja_avaliado:
+            return False
+        self.inicio_fala.append(dados)
+        duracao = len(self.inicio_fala) * BLOCO / TAXA
+        if duracao < 1.6 and not (self.silencio_fala >= 0.35 and duracao >= 0.5):
+            return False
+        self.ja_avaliado = True
+        audio = np.frombuffer(b''.join(self.inicio_fala), dtype=np.int16).astype(np.float32) / 32768.0
+        inicio = time.time()
+        try:
+            texto = self.transcritor.transcrever(self.normalizar_volume(audio), dica=self.dica_nome())
+        except Exception as e:  # noqa: BLE001
+            log('erro ao conferir o nome:', e)
+            return False
+        if not contem_palavra(texto, self.palavras()):
+            return False
+        log(f'ouvi o nome em {time.time() - inicio:.1f}s ("{texto}")')
+        enviar(tipo='ativacao')
+        self.em_fala = False
+        self.ouvir_comando(por_voz=True)
+        return True
+
+    def dica_nome(self):
+        n = self.cfg.get('nome') or 'Emy'
+        # Exemplos com o nome ajudam o Whisper a escrever o nome certo (sem isso "Emy" às vezes vira "AM")
+        return f'{n}, abre o YouTube. Ei {n}, que horas são? {n}, pesquisa receitas.'
+
+    @staticmethod
+    def normalizar_volume(audio):
+        pico = float(np.abs(audio).max()) if audio.size else 0.0
+        if 0.005 < pico < 0.3:  # microfone baixo: aumenta o volume antes de transcrever
+            return audio * min(10.0, 0.5 / pico)
+        return audio
 
     def ouvir_comando(self, por_voz, mostrar=True):
         if mostrar:
@@ -591,7 +653,8 @@ class ServicoVoz:
             if mostrar:
                 enviar(tipo='estado', valor='parado')
             if not por_voz:
-                enviar(tipo='texto', texto='')
+                enviar(tipo='texto', texto=self.pedido_pela_metade)
+                self.pedido_pela_metade = ''
             self.esvaziar_fila()
             return
         if mostrar:
@@ -620,6 +683,18 @@ class ServicoVoz:
                 self.detector.reiniciar()
             self.ouvir_comando(por_voz=False)
             return
+        # Pedido pela metade ("pesquisa...", "abre...", "me fala..."): espera o resto e junta
+        incompleto = re.fullmatch(r'(pesquis\w*|procur\w*|busc\w*|abr\w*|toc\w*|coloc\w*|bot\w*|'
+                                  r'me (fala|conta|diz|mostra)|quero( ouvir| ver)?)', ' '.join(normalizar(texto)))
+        if incompleto and not self.pedido_pela_metade:
+            self.pedido_pela_metade = texto.rstrip(' .!?…,')
+            log('pedido pela metade, esperando o resto:', texto)
+            enviar(tipo='chamado')
+            self.ouvir_comando(por_voz=False)
+            return
+        if self.pedido_pela_metade:
+            texto = (self.pedido_pela_metade + ' ' + texto).strip() if texto else self.pedido_pela_metade
+            self.pedido_pela_metade = ''
         enviar(tipo='estado', valor='parado')
         enviar(tipo='texto', texto=texto)
         self.esvaziar_fila()
@@ -668,11 +743,13 @@ class ServicoVoz:
                         vosk_ouviu = True
                     if parcial != parcial_anterior:
                         parcial_anterior, mudou_em = parcial, duracao
-            if fim_vosk:
-                break  # o Vosk percebeu o fim da frase
-            if vosk_ouviu and duracao - mudou_em >= 1.3:
-                break  # parou de sair palavra nova
-            if falou and silencio >= 1.0 and (rec is None or duracao - mudou_em >= 0.8):
+            # Fim da frase só com silêncio de verdade: pausas curtas no meio ("pesquisa... receitas")
+            # não cortam o pedido.
+            if falou and silencio >= 0.9 and (rec is None or duracao - mudou_em >= 0.6):
+                break
+            if fim_vosk and silencio >= 1.0:
+                break
+            if vosk_ouviu and duracao - mudou_em >= 1.6 and silencio >= 0.8:
                 break
             if not (falou or vosk_ouviu) and duracao >= 7:
                 return None
@@ -710,13 +787,8 @@ class ServicoVoz:
                     break
                 time.sleep(0.1)
         if t and t.modelo:
-            audio = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
-            pico = float(np.abs(audio).max()) if audio.size else 0.0
-            if 0.005 < pico < 0.3:  # microfone baixo: aumenta o volume antes de transcrever
-                audio = audio * min(10.0, 0.5 / pico)
-            n = self.cfg.get('nome') or 'Emy'
-            # Exemplos com o nome ajudam o Whisper a escrever o nome certo (sem isso "Emy" às vezes vira "AM")
-            return t.transcrever(audio, dica=f'{n}, abre o YouTube. Ei {n}, que horas são? {n}, pesquisa receitas.')
+            audio = self.normalizar_volume(np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0)
+            return t.transcrever(audio, dica=self.dica_nome())
         if self.detector:
             return self.detector.transcrever(pcm)
         raise RuntimeError('nenhum mecanismo de transcrição disponível')
@@ -727,6 +799,9 @@ class ServicoVoz:
                 self.fila.get_nowait()
         except queue.Empty:
             pass
+        self.anterior.clear()
+        self.em_fala = False
+        self.fim_comando = time.time()
         if self.detector:
             self.detector.reiniciar()
 
