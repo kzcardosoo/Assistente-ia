@@ -1,0 +1,17 @@
+node_modules/
+dist/
+python/.venv/
+python/build/
+python/dist/
+python/modelos/*
+!python/modelos/LEIA-ME.txt
+modelos/*.vrm
+!modelos/emy.vrm
+animacoes/*.vrma
+*.log
+renderer/vendor/
+__pycache__/
+*.pyc
+python/runtime/
+.cache-portatil/
+ollama/

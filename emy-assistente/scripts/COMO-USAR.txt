@@ -1,0 +1,52 @@
+=====================================================================
+  EMY - assistente virtual para a sua área de trabalho
+=====================================================================
+
+COMO ABRIR
+  1. Descompacte o zip em qualquer pasta sua (Documentos, Área de
+     Trabalho...). Não precisa instalar nada nem ser administrador.
+  2. Abra a pasta "Emy" e dê dois cliques em  Emy.exe
+  3. Se o Windows mostrar "O Windows protegeu o computador", clique em
+     "Mais informações" e depois em "Executar assim mesmo". Isso aparece
+     porque o programa não tem assinatura digital paga; é normal.
+  4. Se o Windows perguntar sobre o microfone, permita.
+
+Ela aparece no canto da tela. Na primeira vez, as Configurações abrem
+sozinhas na aba "IA".
+
+A INTELIGÊNCIA ARTIFICIAL JÁ VEM INCLUÍDA
+  A Emy já vem com uma IA própria (Ollama) que roda no seu PC, sem chave
+  e sem conta. Na PRIMEIRA vez que abrir, ela baixa o "cérebro" dela
+  (cerca de 0,8 GB) e mostra o progresso no balão. Depois disso funciona
+  até sem internet.
+  Se quiser, dá para trocar por uma IA on-line grátis (Gemini, Groq...)
+  em Configurações > IA.
+
+COMO USAR
+  - Fale "Emy, ..." (ex.: "Emy, pesquisa receitas de bolo")
+  - Ou clique nela e fale
+  - Ou aperte Ctrl + Alt + A de qualquer lugar
+  - Clique com o botão direito nela para o menu: escrever mensagem,
+    dançar, trocar de personagem, não perturbe, configurações, sair
+  - Arraste ela com o mouse para mudar de lugar
+  - Para trocar o corpo: solte um arquivo .vrm em cima dela, ou use
+    Configurações > Personagem
+
+O QUE PRECISA DE INTERNET
+  - Só uma vez: baixar o cérebro da IA local (0,8 GB)
+  - A IA on-line, se você escolher uma (Gemini, Groq, OpenRouter)
+  - A voz realista (Edge). Sem internet ela usa a voz do Windows.
+  O reconhecimento do nome e da sua fala funciona sem internet.
+
+INICIAR JUNTO COM O WINDOWS
+  Configurações > Sistema > "Iniciar junto com o computador".
+
+SE ELA NÃO ESTIVER OUVINDO
+  Configurações > Ouvir > "Testar microfone". O teste diz se o som não
+  chega (privacidade do Windows), se está baixo ou se é o microfone errado.
+  Se algo der errado, Configurações > Sistema > "Abrir registro (log)" e
+  mande o conteúdo para quem está te ajudando.
+
+PARA REMOVER
+  Feche a Emy (botão direito > Sair) e apague a pasta "Emy".
+  As configurações ficam em %APPDATA%\Emy Assistente (pode apagar também).

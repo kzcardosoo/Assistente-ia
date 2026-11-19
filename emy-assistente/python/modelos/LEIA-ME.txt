@@ -1,0 +1,9 @@
+Aqui fica o modelo do Vosk usado para ouvir a palavra de ativação (ex.: "Emy").
+
+O instalador (instalar.bat) baixa automaticamente o modelo em português:
+  vosk-model-small-pt-0.3
+
+Se preferir baixar na mão: https://alphacephei.com/vosk/models
+Descompacte a pasta "vosk-model-small-pt-0.3" dentro desta pasta.
+
+O modelo do Whisper (transcrição) é baixado sozinho na primeira vez que ela ouvir você.

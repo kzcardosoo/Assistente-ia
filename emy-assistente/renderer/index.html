@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:">
+  <title>Emy</title>
+  <link rel="stylesheet" href="estilo.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "../node_modules/three/build/three.module.js",
+      "three/addons/": "./vendor/three-addons/",
+      "@pixiv/three-vrm": "../node_modules/@pixiv/three-vrm/lib/three-vrm.module.js",
+      "@pixiv/three-vrm-animation": "../node_modules/@pixiv/three-vrm-animation/lib/three-vrm-animation.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="tela"></canvas>
+  <div id="balao" class="interativo oculto"><span id="balao-texto"></span></div>
+  <div id="aviso" class="interativo oculto"></div>
+  <form id="caixa-texto" class="interativo oculto" autocomplete="off">
+    <input id="entrada" maxlength="500" placeholder="Fale comigo...">
+    <button type="submit" title="Enviar">&#10148;</button>
+  </form>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+{
+  "name": "emy-assistente",
+  "productName": "Emy Assistente",
+  "version": "1.0.0",
+  "description": "Assistente virtual anime para desktop: ouve, fala, conversa com IA gratuita ou local, abre sites e programas, dança e passeia pela tela.",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "node scripts/copiar-addons.js && electron-builder --win",
+    "dist:linux": "node scripts/copiar-addons.js && electron-builder --linux",
+    "postinstall": "node scripts/copiar-addons.js",
+    "prestart": "node scripts/copiar-addons.js",
+    "portatil": "bash scripts/montar-portatil.sh"
+  },
+  "build": {
+    "appId": "com.assistente.emy",
+    "productName": "Emy Assistente",
+    "files": [
+      "main.js",
+      "preload.js",
+      "preload-config.js",
+      "src/**",
+      "renderer/**",
+      "assets/**",
+      "config.padrao.json"
+    ],
+    "extraResources": [
+      {
+        "from": "python",
+        "to": "python",
+        "filter": [
+          "**/*",
+          "!.venv/**",
+          "!build/**",
+          "!__pycache__/**",
+          "!**/*.pyc"
+        ]
+      },
+      {
+        "from": "modelos",
+        "to": "modelos"
+      },
+      {
+        "from": "animacoes",
+        "to": "animacoes"
+      },
+      {
+        "from": "ollama",
+        "to": "ollama"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icone.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "executableName": "Emy",
+    "electronLanguages": [
+      "pt-BR",
+      "en-US"
+    ],
+    "copyright": "Emy Assistente"
+  },
+  "dependencies": {
+    "@pixiv/three-vrm": "^3.5.5",
+    "@pixiv/three-vrm-animation": "^3.5.5",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "electron": "^45.3.4",
+    "electron-builder": "^26.18.0"
+  },
+  "author": "Emy Assistente"
+}
